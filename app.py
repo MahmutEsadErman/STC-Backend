@@ -24,6 +24,7 @@ def get_subject_data():
         querySubject = "SELECT * FROM Deneme;"
 
         conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
+
         cursor = conn.cursor()
         cursor.execute(querySubject)
         # Fetch results
@@ -43,12 +44,13 @@ def get_subject_data():
         #
         # if not res:
         #     return make_response(jsonify('{error: subject not found}'), 404)
-        return make_response(jsonify('{success: ok başarılı}'), 200)
+        cursor.close()
+        conn.close()
+        return make_response(jsonify(results), 200)
     except Exception as e:
         return make_response(jsonify('{error:' + str(e) + '}'), 404)
     finally:
-        cursor.close()
-        conn.close()
+        pass
 
 
 @app.route("/api/login", methods=["POST"])
