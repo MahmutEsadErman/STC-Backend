@@ -13,18 +13,18 @@ passDb = os.environ.get("PASS")
 db = os.environ.get("DB")
 
 
-
 @app.route('/', methods=["GET"])
 def database_deneme():
-
     return "hello world"
+
 
 @app.route('/api/data/subject', methods=["GET"])
 def get_subject_data():
     try:
         querySubject = "SELECT * FROM Deneme;"
 
-        conn = mysql.connector.connect(host,userDb,passDb,db)
+        conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
+
         cursor = conn.cursor()
         cursor.execute(querySubject)
         # Fetch results
@@ -43,8 +43,8 @@ def get_subject_data():
         #     })
         #
         # if not res:
-        #     return make_response(jsonify('{error:   subject not found}'), 404)
-        return make_response(jsonify('{success:.ok başarılı}'), 200)
+        #     return make_response(jsonify('{error: subject not found}'), 404)
+        return make_response(jsonify('{success: ok başarılı}'), 200)
     except Exception as e:
         return make_response(jsonify('{error:' + str(e) + '}'), 404)
     finally:
