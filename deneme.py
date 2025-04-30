@@ -22,3 +22,5 @@ for row in results:
 # Clean up
 cursor.close()
 conn.close()
+
+print("deneme.py worked")
