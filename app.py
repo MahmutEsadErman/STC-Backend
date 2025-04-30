@@ -32,7 +32,8 @@ def get_subject_data():
     except Exception as e:
         return make_response(jsonify('{error:' + str(e) + '}'), 404)
     finally:
-        con.close()
+        pass
+        #con.close()
 
 
 @app.route("/api/login", methods=["POST"])
