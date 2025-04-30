@@ -1,5 +1,6 @@
 import os
 
+import mysql.connector
 from flask import Flask, jsonify, make_response, request
 from flask_cors import CORS
 
@@ -11,13 +12,28 @@ userDb = os.environ.get("USER")
 passDb = os.environ.get("PASS")
 db = os.environ.get("DB")
 
+
+
+@app.route('/', methods=["GET"])
+def database_deneme():
+
+    return "hello world"
+
 @app.route('/api/data/subject', methods=["GET"])
 def get_subject_data():
     try:
-        # con = pymssql.connect(host,userDb,passDb,db)
-        # cur = con.cursor()
-        # cur.execute(querySubject)
-        # resLesson = queryCalc(cur.description, cur.fetchall())
+        querySubject = "SELECT * FROM Deneme;"
+
+        conn = mysql.connector.connect(host,userDb,passDb,db)
+        cursor = conn.cursor()
+        cursor.execute(querySubject)
+        # Fetch results
+        results = cursor.fetchall()
+        for row in results:
+            print(row)
+
+        # Clean up
+
         # res = []
         # for i in resLesson:
         #     res.append({
@@ -32,8 +48,8 @@ def get_subject_data():
     except Exception as e:
         return make_response(jsonify('{error:' + str(e) + '}'), 404)
     finally:
-        pass
-        #con.close()
+        cursor.close()
+        conn.close()
 
 
 @app.route("/api/login", methods=["POST"])
