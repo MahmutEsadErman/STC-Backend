@@ -97,7 +97,7 @@ def send_timetable():
         # Get the supervisor's user_id
         query = f"SELECT user_id FROM supervisor WHERE group_id = (SELECT group_id FROM employee WHERE user_id = {user_id});"
         cursor.execute(query)
-        supervisor_id = cursor.fetchone()
+        supervisor_id = cursor.fetchall()[0][0]
 
         # Update the status of the work time sheet
         query = f"""
