@@ -8,11 +8,15 @@ app = Flask(__name__)
 CORS(app)
 
 # Database connection details
-host = os.environ.get("HOST")
-userDb = os.environ.get("USER")
-passDb = os.environ.get("PASS")
-db = os.environ.get("DB")
+# host = os.environ.get("HOST")
+# userDb = os.environ.get("USER")
+# passDb = os.environ.get("PASS")
+# db = os.environ.get("DB")
 
+host = "MYSQL1002.site4now.net"
+userDb = "ab83bf_stcadmi"
+passDb = "Turkiye1461."
+db = "db_ab83bf_stcadmi"
 
 class NotificationTypes:
     SEND_TIMETABLE = 1
@@ -56,7 +60,7 @@ def save_timetable():
             comment = entry["comment"]
             status = entry["status"]
 
-            query += f" ({user_id}, '{work_date}', '{start_time}', '{end_time}', {break_time}, {hours_target}, {hours_as_is}, {absence}, '{comment}', {status}),"
+            query += f" ({user_id}, '{work_date}', '{start_time}', '{end_time}', '{break_time}', '{hours_target}', '{hours_as_is}', '{absence}', '{comment}', '{status}'),"
 
         # Remove the last comma and add a semicolon
         query = query[:-1] + ";"
