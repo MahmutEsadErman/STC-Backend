@@ -7,10 +7,16 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-host = os.environ.get("HOST")
-userDb = os.environ.get("USER")
-passDb = os.environ.get("PASS")
-db = os.environ.get("DB")
+host = "MYSQL1002.site4now.net"
+userDb = "ab83bf_stcadmi"
+passDb = "Turkiye1461."
+db = "db_ab83bf_stcadmi"
+
+
+# host = os.environ.get("HOST")
+# userDb = os.environ.get("USER")
+# passDb = os.environ.get("PASS")
+# db = os.environ.get("DB")
 
 
 class NotificationTypes:
@@ -30,6 +36,8 @@ def database_deneme():
 
 @app.route("/saveTimetable", methods=["POST"])
 def save_timetable():
+    conn = None
+    cursor = None
     try:
         user_id = request.json["userId"]
         timesheet = request.json["timesheet"]
@@ -66,8 +74,10 @@ def save_timetable():
         return make_response(jsonify('{error:' + str(e) + '}'), 404)
     finally:
         # Clean up
-        cursor.close()
-        conn.close()
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 
 @app.route("/sendTimetable", methods=["POST"])
@@ -112,21 +122,20 @@ def send_timetable():
         return make_response(jsonify('{error:' + str(e) + '}'), 404)
     finally:
         # Clean up
-        cursor.close()
-        conn.close()
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 
-@app.route("/getTimetable", methods=["GET"])
-def get_timetable():
+
+@app.route("/getTimetable/<user_id>", methods=["GET"])
+def get_timetable(user_id):
     conn = None
     cursor = None
     try:
-        # Get userId
-        user_id = request.json["userId"]
-
         query = f" SELECT * FROM work_time_sheet WHERE user_id = {user_id}; "
 
-        print("hello")
         # Establish connection
         conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
 
@@ -139,18 +148,17 @@ def get_timetable():
         # Fetch results
         results = cursor.fetchall()
 
-        print("hello")
         # Process results
         response = []
         for i in results:
             response.append({
                 "userId": i[0],
                 "workDate": i[1],
-                "startTime": i[2],
-                "endTime": i[3],
-                "breakTime": i[4],
-                "hoursTarget": i[5],
-                "hoursAsIs": i[6],
+                "startTime": str(i[2]),
+                "endTime": str(i[3]),
+                "breakTime": str(i[4]),
+                "hoursTarget": str(i[5]),
+                "hoursAsIs": str(i[6]),
                 "absence": i[7],
                 "comment": i[8],
                 "status": i[9]
@@ -173,6 +181,8 @@ def get_timetable():
 # Supervisor approves or rejects the timetable
 @app.route("/respond_timetable", methods=["POST"])
 def respond_timetable():
+    conn = None
+    cursor = None
     try:
         # Get data from the request
         user_id = request.json["userId"]
@@ -211,17 +221,19 @@ def respond_timetable():
         return make_response(jsonify('{error:' + str(e) + '}'), 404)
     finally:
         # Clean up
-        cursor.close()
-        conn.close()
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 
-@app.route("/notifications", methods=["GET"])
-def get_notifications():
+@app.route("/notifications/<user_id>", methods=["GET"])
+def get_notifications(user_id):
+    conn = None
+    cursor = None
     try:
-        # Get userId
-        user_id = request.json["userId"]
-
-        query = f" SELECT * FROM notifications WHERE receiver_id = {user_id}; "
+        # Get notifications for the user
+        query = f" SELECT * FROM notification WHERE receiver_id = {user_id}; "
 
         # Establish connection
         conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
@@ -253,17 +265,79 @@ def get_notifications():
         return make_response(jsonify('{error:' + str(e) + '}'), 404)
     finally:
         # Clean up
-        cursor.close()
-        conn.close()
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 
-@app.route("/api/login", methods=["POST"])
-def user_login():
+@app.route("/login", methods=["POST"])
+def login():
+    conn = None
+    cursor = None
     try:
+        # Get user credentials
+        email = request.json["email"]
+        password = request.json["password"]
 
-        return make_response(jsonify('{success: ok başarılı}'), 200)
+        # Establish connection
+        conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
+        cursor = conn.cursor()
+
+        # Check if the user exists
+        query = f"SELECT role FROM users WHERE username = '{email}' AND password = '{password}';"
+        cursor.execute(query)
+        result = cursor.fetchone()
+
+        if result is None:
+            return make_response(jsonify('{error: user not found}'), 404)
+        else:
+            response = {'role': result[0]}
+
+        return make_response(jsonify(response), 200)
     except Exception as e:
         return make_response(jsonify('{error:' + str(e) + '}'), 404)
+    finally:
+        # Clean up
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+@app.route("/register", methods=["POST"])
+def register():
+    conn = None
+    cursor = None
+    try:
+        # Get user credentials
+        email = request.json["email"]
+        password = request.json["password"]
+        name = request.json["name"]
+        lastname = request.json["lastname"]
+        role = request.json["role"]
+
+        # Establish connection
+        conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
+        cursor = conn.cursor()
+
+        # Check if the user exists
+        query = f"INSERT INTO users (email, password, name, lastname, role) VALUES ('{email}', '{password}', '{name}', '{lastname}', '{role}');"
+        cursor.execute(query)
+
+        # Commit the changes
+        conn.commit()
+
+        return make_response(jsonify('{success: user registered}'), 200)
+    except Exception as e:
+        return make_response(jsonify('{error:' + str(e) + '}'), 404)
+    finally:
+        # Clean up
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
 
 
 if __name__ == '__main__':

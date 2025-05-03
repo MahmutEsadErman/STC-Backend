@@ -924,7 +924,7 @@ db_ab83bf_stcadmi|schema||ab83bf_stcadmi||UPDATE|G</Grants>
     </collation>
     <schema id="288" parent="1" name="db_ab83bf_stcadmi">
       <Current>1</Current>
-      <LastIntrospectionLocalTimestamp>2025-05-02.09:33:49</LastIntrospectionLocalTimestamp>
+      <LastIntrospectionLocalTimestamp>2025-05-03.09:28:14</LastIntrospectionLocalTimestamp>
       <CollationName>utf8mb3_unicode_ci</CollationName>
     </schema>
     <schema id="289" parent="1" name="information_schema">
@@ -987,7 +987,7 @@ db_ab83bf_stcadmi|schema||ab83bf_stcadmi||UPDATE|G</Grants>
       <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
     </key>
     <column id="304" parent="293" name="notification_id">
-      <AutoIncrement>8</AutoIncrement>
+      <AutoIncrement>10</AutoIncrement>
       <DasType>int|0s</DasType>
       <NotNull>1</NotNull>
       <Position>1</Position>
@@ -996,8 +996,9 @@ db_ab83bf_stcadmi|schema||ab83bf_stcadmi||UPDATE|G</Grants>
       <DasType>datetime|0s</DasType>
       <Position>2</Position>
     </column>
-    <column id="306" parent="293" name="reciever_id">
+    <column id="306" parent="293" name="receiver_id">
       <DasType>int|0s</DasType>
+      <NotNull>1</NotNull>
       <Position>3</Position>
     </column>
     <column id="307" parent="293" name="submitter_id">
