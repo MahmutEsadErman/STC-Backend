@@ -109,7 +109,7 @@ def send_timetable():
         cursor.execute(query)
 
         # Notification for the supervisor
-        query = f"""INSERT INTO notification (timestamp, reciever_id, submitter_id, type, status, empl_id, message) 
+        query = f"""INSERT INTO notification (timestamp, receiver_id, submitter_id, type, status, empl_id, message) 
         VALUES (current_date, {supervisor_id}, {user_id}, {NotificationTypes.SEND_TIMETABLE}, 0, {user_id}, '{comment}');
         """
 
