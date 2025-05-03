@@ -95,7 +95,7 @@ def send_timetable():
         cursor = conn.cursor()
 
         # Get the supervisor's user_id
-        query = f"SELECT user_id FROM supervisor WHERE group_id = (SELECT group_id FROM employee WHERE user_id = {user_id};)"
+        query = f"SELECT user_id FROM supervisor WHERE group_id = (SELECT group_id FROM employee WHERE user_id = {user_id});"
         cursor.execute(query)
         supervisor_id = cursor.fetchall()
 
@@ -103,11 +103,11 @@ def send_timetable():
         query = f"""
             UPDATE work_time_sheet
             SET status = '{new_status}'
-            WHERE user_id = {user_id} AND status = 'pending';
+            WHERE user_id = {user_id} AND status = 'pending'; 
         """
 
         # Notification for the supervisor
-        query += f"""INSERT INTO notification (timestamp, reciever_id, submitter_id, type, status, empl_id, message) 
+        query += f""" INSERT INTO notification (timestamp, reciever_id, submitter_id, type, status, empl_id, message) 
         VALUES (current_date, {supervisor_id}, {user_id}, {NotificationTypes.SEND_TIMETABLE}, 0, {user_id}, '{comment}');
         """
 
