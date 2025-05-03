@@ -7,10 +7,20 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-host = "MYSQL1002.site4now.net"
-userDb = "ab83bf_stcadmi"
-passDb = "Turkiye1461."
-db = "db_ab83bf_stcadmi"
+host = os.environ.get("HOST")
+userDb = os.environ.get("USER")
+passDb = os.environ.get("PASS")
+db = os.environ.get("DB")
+
+
+class NotificationTypes:
+    SEND_TIMETABLE = 1
+    TIMETABLE_APPROVAL = 2
+    TIMETABLE_REJECTION = 3
+    SICKNESS = 4
+    VOCATION = 5
+    VOCATION_APPROVAL = 6
+    VOCATION_REJECTION = 7
 
 
 @app.route('/', methods=["GET"])
@@ -18,45 +28,7 @@ def database_deneme():
     return "hello world"
 
 
-@app.route('/example', methods=["GET"])
-def example():
-    try:
-        # Example query
-        query = "SELECT * FROM deneme;"
-
-        # Establish connection
-        conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
-
-        # Create a cursor to interact with the database
-        cursor = conn.cursor()
-        cursor.execute(query)
-
-        # Fetch results
-        results = cursor.fetchall()
-
-        # Process results
-        response = []
-        for i in results:
-            response.append({
-                "id": i[0],
-                "name": i[1],
-                "age": i[2]
-            })
-
-        # Clean up
-        cursor.close()
-        conn.close()
-
-        if not response:
-            return make_response(jsonify('{error: subject not found}'), 404)
-
-        # Return the response
-        return make_response(jsonify(response), 200)
-    except Exception as e:
-        return make_response(jsonify('{error:' + str(e) + '}'), 404)
-
-
-@app.route("/saveTimetable/", methods=["POST"])
+@app.route("/saveTimetable", methods=["POST"])
 def save_timetable():
     try:
         user_id = request.json["userId"]
@@ -68,6 +40,8 @@ def save_timetable():
         # Create a cursor to interact with the database
         cursor = conn.cursor()
 
+        query = "INSERT INTO work_time_sheet VALUES"
+
         for entry in timesheet:
             work_date = entry["workDate"]
             start_time = entry["startTime"]
@@ -77,22 +51,23 @@ def save_timetable():
             hours_as_is = entry["hoursAsIs"]
             absence = entry["absence"]
             comment = entry["comment"]
-            checked = entry["status"]
+            status = entry["status"]
 
-            cursor.execute(f"""
-                INSERT INTO work_time_sheet
-                VALUES ({user_id}, {work_date}, '{start_time}', {end_time}, {break_time}, {hours_target}, {hours_as_is}, {absence}, {comment}, {checked})
-                            """)
+            query += f" ({user_id}, '{work_date}', '{start_time}', '{end_time}', {break_time}, {hours_target}, {hours_as_is}, {absence}, '{comment}', {status}),"
+
+        query[:-1] = ';'  # Remove the last comma and add a semicolon
+
+        cursor.execute(query)
 
         conn.commit()
-
-        # Clean up
-        cursor.close()
-        conn.close()
 
         return make_response(jsonify('{success: work timesheet saved to the system}'), 200)
     except Exception as e:
         return make_response(jsonify('{error:' + str(e) + '}'), 404)
+    finally:
+        # Clean up
+        cursor.close()
+        conn.close()
 
 
 @app.route("/sendTimetable", methods=["POST"])
@@ -100,19 +75,29 @@ def send_timetable():
     try:
         # Get userId
         user_id = request.json["userId"]
+        comment = request.json["comment"]
         new_status = "pending"
-
-        query = f"""
-            UPDATE work_time_sheet
-            SET status = '{new_status}'
-            WHERE user_id = {user_id};
-        """
 
         # Establish connection
         conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
-
-        # Create a cursor to interact with the database
         cursor = conn.cursor()
+
+        # Get the supervisor's user_id
+        query = f"SELECT user_id FROM supervisor WHERE group_id = (SELECT group_id FROM employee WHERE user_id = {user_id};)"
+        cursor.execute(query)
+        supervisor_id = cursor.fetchall()
+
+        # Update the status of the work time sheet
+        query = f"""
+            UPDATE work_time_sheet
+            SET status = '{new_status}'
+            WHERE user_id = {user_id} AND status = 'pending';
+        """
+
+        # Notification for the supervisor
+        query += f"""INSERT INTO notification (timestamp, reciever_id, submitter_id, type, status, empl_id, message) 
+        VALUES (current_date, {supervisor_id}, {user_id}, {NotificationTypes.SEND_TIMETABLE}, 0, {user_id}, '{comment}');
+        """
 
         # Execute the query
         cursor.execute(query)
@@ -129,7 +114,7 @@ def send_timetable():
         conn.close()
 
 
-@app.route("/getTimetable/", methods=["GET"])
+@app.route("/getTimetable", methods=["GET"])
 def get_timetable():
     try:
         # Get userId
@@ -162,12 +147,8 @@ def get_timetable():
                 "hoursAsIs": i[6],
                 "absence": i[7],
                 "comment": i[8],
-                "checked": i[9]
+                "status": i[9]
             })
-
-        # Clean up
-        cursor.close()
-        conn.close()
 
         if not response:
             return make_response(jsonify('{error: subject not found}'), 404)
@@ -175,13 +156,104 @@ def get_timetable():
         return make_response(jsonify(response), 200)
     except Exception as e:
         return make_response(jsonify('{error:' + str(e) + '}'), 404)
+    finally:
+        # Clean up
+        cursor.close()
+        conn.close()
+
+
+# Supervisor approves or rejects the timetable
+@app.route("/respond_timetable", methods=["POST"])
+def respond_timetable():
+    try:
+        # Get data from the request
+        user_id = request.json["userId"]
+        employee_id = request.json["employeeId"]
+        timetable_id = request.json["timetableId"]
+        response = request.json["response"]  # "approve" or "reject"
+        comment = request.json["comment"]
+
+        # Establish connection
+        conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
+        cursor = conn.cursor()
+
+        # Determine the new status based on the response
+        new_status = "approved" if response else "rejected"
+
+        # Update the timetable status
+        query = f"""
+            UPDATE work_time_sheet
+            SET status = '{new_status}'
+            WHERE id = {timetable_id} AND user_id = {user_id};
+        """
+        cursor.execute(query)
+
+        # Add a notification for the employee
+        query = f"""
+            INSERT INTO notification (timestamp, reciever_id, submitter_id, type, status, empl_id, message)
+            VALUES (current_date, {employee_id}, {user_id}, {NotificationTypes.TIMETABLE_APPROVAL if response else NotificationTypes.TIMETABLE_REJECTION}, 0, {employee_id}, '{comment}');
+        """
+        cursor.execute(query)
+
+        # Commit the changes
+        conn.commit()
+
+        return make_response(jsonify('{success: timetable response recorded}'), 200)
+    except Exception as e:
+        return make_response(jsonify('{error:' + str(e) + '}'), 404)
+    finally:
+        # Clean up
+        cursor.close()
+        conn.close()
+
+
+@app.route("/notifications", methods=["GET"])
+def get_notifications():
+    try:
+        # Get userId
+        user_id = request.json["userId"]
+
+        query = f" SELECT * FROM notifications WHERE receiver_id = {user_id}; "
+
+        # Establish connection
+        conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
+        cursor = conn.cursor()
+
+        cursor.execute(query)
+        # Fetch results
+        results = cursor.fetchall()
+
+        # Process results
+        response = []
+        for i in results:
+            response.append({
+                "notificationId": i[0],
+                "timestamp": i[1],
+                "receiverId": i[2],
+                "submitterId": i[3],
+                "type": i[4],
+                "status": i[5],
+                "employeeID": i[6],
+                "message": i[7]
+            })
+
+        if not response:
+            return make_response(jsonify('{error: subject not found}'), 404)
+
+        return make_response(jsonify(response), 200)
+    except Exception as e:
+        return make_response(jsonify('{error:' + str(e) + '}'), 404)
+    finally:
+        # Clean up
+        cursor.close()
+        conn.close()
 
 
 @app.route("/api/login", methods=["POST"])
 def user_login():
     try:
 
-        return make_response(jsonify('{success:.ok başarılı}'), 200)
+        return make_response(jsonify('{success: ok başarılı}'), 200)
     except Exception as e:
         return make_response(jsonify('{error:' + str(e) + '}'), 404)
 

@@ -924,7 +924,7 @@ db_ab83bf_stcadmi|schema||ab83bf_stcadmi||UPDATE|G</Grants>
     </collation>
     <schema id="288" parent="1" name="db_ab83bf_stcadmi">
       <Current>1</Current>
-      <LastIntrospectionLocalTimestamp>2025-04-30.11:40:34</LastIntrospectionLocalTimestamp>
+      <LastIntrospectionLocalTimestamp>2025-05-02.09:33:49</LastIntrospectionLocalTimestamp>
       <CollationName>utf8mb3_unicode_ci</CollationName>
     </schema>
     <schema id="289" parent="1" name="information_schema">
@@ -934,43 +934,260 @@ db_ab83bf_stcadmi|schema||ab83bf_stcadmi||UPDATE|G</Grants>
       <CollationName>utf8mb4_0900_ai_ci</CollationName>
     </schema>
     <user id="291" parent="1" name="ab83bf_stcadmi"/>
-    <table id="292" parent="288" name="deneme">
+    <table id="292" parent="288" name="employee">
       <Engine>InnoDB</Engine>
       <CollationName>utf8mb3_unicode_ci</CollationName>
     </table>
-    <column id="293" parent="292" name="id">
-      <AutoIncrement>1</AutoIncrement>
-      <DasType>bigint unsigned|0s</DasType>
+    <table id="293" parent="288" name="notification">
+      <Engine>InnoDB</Engine>
+      <CollationName>utf8mb3_unicode_ci</CollationName>
+    </table>
+    <table id="294" parent="288" name="supervisor">
+      <Engine>InnoDB</Engine>
+      <CollationName>utf8mb3_unicode_ci</CollationName>
+    </table>
+    <table id="295" parent="288" name="users">
+      <Engine>InnoDB</Engine>
+      <CollationName>utf8mb3_unicode_ci</CollationName>
+    </table>
+    <table id="296" parent="288" name="vocation_request">
+      <Engine>InnoDB</Engine>
+      <CollationName>utf8mb3_unicode_ci</CollationName>
+    </table>
+    <table id="297" parent="288" name="work_time_sheet">
+      <Engine>InnoDB</Engine>
+      <CollationName>utf8mb3_unicode_ci</CollationName>
+    </table>
+    <column id="298" parent="292" name="user_id">
+      <DasType>int|0s</DasType>
       <NotNull>1</NotNull>
       <Position>1</Position>
     </column>
-    <column id="294" parent="292" name="name">
-      <DasType>varchar(50)|0s</DasType>
-      <NotNull>1</NotNull>
+    <column id="299" parent="292" name="group_id">
+      <DasType>int|0s</DasType>
       <Position>2</Position>
     </column>
-    <column id="295" parent="292" name="age">
-      <DasType>int|0s</DasType>
-      <NotNull>1</NotNull>
-      <Position>3</Position>
-    </column>
-    <index id="296" parent="292" name="PRIMARY">
-      <ColNames>id</ColNames>
+    <foreign-key id="300" parent="292" name="fk_emp_sup">
+      <ColNames>group_id</ColNames>
+      <RefColNames>group_id</RefColNames>
+      <RefTableName>supervisor</RefTableName>
+    </foreign-key>
+    <index id="301" parent="292" name="PRIMARY">
+      <ColNames>user_id</ColNames>
       <Type>btree</Type>
       <Unique>1</Unique>
     </index>
-    <index id="297" parent="292" name="id">
-      <ColNames>id</ColNames>
+    <index id="302" parent="292" name="fk_emp_sup">
+      <ColNames>group_id</ColNames>
       <Type>btree</Type>
-      <Unique>1</Unique>
     </index>
-    <key id="298" parent="292" name="PRIMARY">
+    <key id="303" parent="292" name="PRIMARY">
       <NameSurrogate>1</NameSurrogate>
       <Primary>1</Primary>
       <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
     </key>
-    <key id="299" parent="292" name="id">
-      <UnderlyingIndexName>id</UnderlyingIndexName>
+    <column id="304" parent="293" name="notification_id">
+      <AutoIncrement>8</AutoIncrement>
+      <DasType>int|0s</DasType>
+      <NotNull>1</NotNull>
+      <Position>1</Position>
+    </column>
+    <column id="305" parent="293" name="timestamp">
+      <DasType>datetime|0s</DasType>
+      <Position>2</Position>
+    </column>
+    <column id="306" parent="293" name="reciever_id">
+      <DasType>int|0s</DasType>
+      <Position>3</Position>
+    </column>
+    <column id="307" parent="293" name="submitter_id">
+      <DasType>int|0s</DasType>
+      <Position>4</Position>
+    </column>
+    <column id="308" parent="293" name="type">
+      <DasType>int|0s</DasType>
+      <Position>5</Position>
+    </column>
+    <column id="309" parent="293" name="status">
+      <DasType>int|0s</DasType>
+      <Position>6</Position>
+    </column>
+    <column id="310" parent="293" name="empl_id">
+      <DasType>int|0s</DasType>
+      <Position>7</Position>
+    </column>
+    <column id="311" parent="293" name="message">
+      <DasType>varchar(300)|0s</DasType>
+      <Position>8</Position>
+    </column>
+    <index id="312" parent="293" name="notification_id">
+      <ColNames>notification_id</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <key id="313" parent="293" name="notification_id">
+      <UnderlyingIndexName>notification_id</UnderlyingIndexName>
     </key>
+    <column id="314" parent="294" name="user_id">
+      <DasType>int|0s</DasType>
+      <Position>1</Position>
+    </column>
+    <column id="315" parent="294" name="group_id">
+      <DasType>int|0s</DasType>
+      <NotNull>1</NotNull>
+      <Position>2</Position>
+    </column>
+    <index id="316" parent="294" name="user_id">
+      <ColNames>user_id</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="317" parent="294" name="PRIMARY">
+      <ColNames>group_id</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <key id="318" parent="294" name="PRIMARY">
+      <NameSurrogate>1</NameSurrogate>
+      <Primary>1</Primary>
+      <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
+    </key>
+    <key id="319" parent="294" name="user_id">
+      <UnderlyingIndexName>user_id</UnderlyingIndexName>
+    </key>
+    <column id="320" parent="295" name="user_id">
+      <AutoIncrement>6</AutoIncrement>
+      <DasType>int|0s</DasType>
+      <NotNull>1</NotNull>
+      <Position>1</Position>
+    </column>
+    <column id="321" parent="295" name="password">
+      <DasType>varchar(30)|0s</DasType>
+      <Position>2</Position>
+    </column>
+    <column id="322" parent="295" name="name">
+      <DasType>varchar(30)|0s</DasType>
+      <Position>3</Position>
+    </column>
+    <column id="323" parent="295" name="lastname">
+      <DasType>varchar(30)|0s</DasType>
+      <Position>4</Position>
+    </column>
+    <column id="324" parent="295" name="email">
+      <DasType>varchar(100)|0s</DasType>
+      <Position>5</Position>
+    </column>
+    <column id="325" parent="295" name="role">
+      <DasType>enum(&apos;employee&apos;, &apos;supervisor&apos;, &apos;HR&apos;)|0e</DasType>
+      <Position>6</Position>
+    </column>
+    <index id="326" parent="295" name="PRIMARY">
+      <ColNames>user_id</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <key id="327" parent="295" name="PRIMARY">
+      <NameSurrogate>1</NameSurrogate>
+      <Primary>1</Primary>
+      <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
+    </key>
+    <column id="328" parent="296" name="request_id">
+      <AutoIncrement>7</AutoIncrement>
+      <DasType>int|0s</DasType>
+      <NotNull>1</NotNull>
+      <Position>1</Position>
+    </column>
+    <column id="329" parent="296" name="emp_id">
+      <DasType>int|0s</DasType>
+      <Position>2</Position>
+    </column>
+    <column id="330" parent="296" name="start_date">
+      <DasType>date|0s</DasType>
+      <Position>3</Position>
+    </column>
+    <column id="331" parent="296" name="end_time">
+      <DasType>date|0s</DasType>
+      <Position>4</Position>
+    </column>
+    <column id="332" parent="296" name="status">
+      <DasType>int|0s</DasType>
+      <Position>5</Position>
+    </column>
+    <column id="333" parent="296" name="request_timestamp">
+      <DasType>datetime|0s</DasType>
+      <Position>6</Position>
+    </column>
+    <column id="334" parent="296" name="reasons_for_rejection">
+      <DasType>varchar(300)|0s</DasType>
+      <Position>7</Position>
+    </column>
+    <foreign-key id="335" parent="296" name="vocation_request_ibfk_1">
+      <ColNames>emp_id</ColNames>
+      <RefColNames>user_id</RefColNames>
+      <RefTableName>employee</RefTableName>
+    </foreign-key>
+    <index id="336" parent="296" name="request_id">
+      <ColNames>request_id</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="337" parent="296" name="emp_id">
+      <ColNames>emp_id</ColNames>
+      <Type>btree</Type>
+    </index>
+    <key id="338" parent="296" name="request_id">
+      <UnderlyingIndexName>request_id</UnderlyingIndexName>
+    </key>
+    <column id="339" parent="297" name="user_id">
+      <DasType>int|0s</DasType>
+      <Position>1</Position>
+    </column>
+    <column id="340" parent="297" name="date">
+      <DasType>date|0s</DasType>
+      <Position>2</Position>
+    </column>
+    <column id="341" parent="297" name="begin">
+      <DasType>time|0s</DasType>
+      <Position>3</Position>
+    </column>
+    <column id="342" parent="297" name="end">
+      <DasType>time|0s</DasType>
+      <Position>4</Position>
+    </column>
+    <column id="343" parent="297" name="break_time">
+      <DasType>time|0s</DasType>
+      <Position>5</Position>
+    </column>
+    <column id="344" parent="297" name="hours_target">
+      <DasType>time|0s</DasType>
+      <Position>6</Position>
+    </column>
+    <column id="345" parent="297" name="hours_as_is">
+      <DasType>time|0s</DasType>
+      <Position>7</Position>
+    </column>
+    <column id="346" parent="297" name="absence">
+      <DasType>enum(&apos;sick&apos;, &apos;vocation&apos;, &apos;flextime&apos;, &apos;no&apos;, &apos;travel&apos;)|0e</DasType>
+      <Position>8</Position>
+    </column>
+    <column id="347" parent="297" name="comment">
+      <DasType>varchar(300)|0s</DasType>
+      <Position>9</Position>
+    </column>
+    <column id="348" parent="297" name="status">
+      <DasType>enum(&apos;pending&apos;, &apos;sent&apos;, &apos;approved&apos;, &apos;denied&apos;)|0e</DasType>
+      <DefaultExpression>&apos;pending&apos;</DefaultExpression>
+      <NotNull>1</NotNull>
+      <Position>10</Position>
+    </column>
+    <foreign-key id="349" parent="297" name="work_time_sheet_ibfk_1">
+      <ColNames>user_id</ColNames>
+      <RefColNames>user_id</RefColNames>
+      <RefTableName>employee</RefTableName>
+    </foreign-key>
+    <index id="350" parent="297" name="user_id">
+      <ColNames>user_id</ColNames>
+      <Type>btree</Type>
+    </index>
   </database-model>
 </dataSource>
