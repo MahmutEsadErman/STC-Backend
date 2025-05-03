@@ -8,15 +8,12 @@ app = Flask(__name__)
 CORS(app)
 
 # Database connection details
-# host = os.environ.get("HOST")
-# userDb = os.environ.get("USER")
-# passDb = os.environ.get("PASS")
-# db = os.environ.get("DB")
+host = os.environ.get("HOST")
+userDb = os.environ.get("USER")
+passDb = os.environ.get("PASS")
+db = os.environ.get("DB")
 
-host = "MYSQL1002.site4now.net"
-userDb = "ab83bf_stcadmi"
-passDb = "Turkiye1461."
-db = "db_ab83bf_stcadmi"
+
 
 class NotificationTypes:
     SEND_TIMETABLE = 1
@@ -187,7 +184,7 @@ def respond_timetable():
         # Get data from the request
         user_id = request.json["userId"]
         employee_id = request.json["employeeId"]
-        timetable_id = request.json["timetableId"]
+        date = request.json["date"]
         response = request.json["response"]  # "approved" or "denied"
         comment = request.json["comment"]
 
@@ -202,13 +199,13 @@ def respond_timetable():
         query = f"""
             UPDATE work_time_sheet
             SET status = '{new_status}'
-            WHERE id = {timetable_id} AND user_id = {user_id};
+            WHERE date = {'date'} AND user_id = {user_id};
         """
         cursor.execute(query)
 
         # Add a notification for the employee
         query = f"""
-            INSERT INTO notification (timestamp, reciever_id, submitter_id, type, status, empl_id, message)
+            INSERT INTO notification (timestamp, receiver_id, submitter_id, type, status, empl_id, message)
             VALUES (current_date, {employee_id}, {user_id}, {NotificationTypes.TIMETABLE_APPROVAL if response else NotificationTypes.TIMETABLE_REJECTION}, 0, {employee_id}, '{comment}');
         """
         cursor.execute(query)
