@@ -7,16 +7,11 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-host = "MYSQL1002.site4now.net"
-userDb = "ab83bf_stcadmi"
-passDb = "Turkiye1461."
-db = "db_ab83bf_stcadmi"
-
-
-# host = os.environ.get("HOST")
-# userDb = os.environ.get("USER")
-# passDb = os.environ.get("PASS")
-# db = os.environ.get("DB")
+# Database connection details
+host = os.environ.get("HOST")
+userDb = os.environ.get("USER")
+passDb = os.environ.get("PASS")
+db = os.environ.get("DB")
 
 
 class NotificationTypes:
@@ -63,7 +58,8 @@ def save_timetable():
 
             query += f" ({user_id}, '{work_date}', '{start_time}', '{end_time}', {break_time}, {hours_target}, {hours_as_is}, {absence}, '{comment}', {status}),"
 
-        query[:-1] = ';'  # Remove the last comma and add a semicolon
+        # Remove the last comma and add a semicolon
+        query = query[:-1] + ";"
 
         cursor.execute(query)
 
@@ -126,7 +122,6 @@ def send_timetable():
             cursor.close()
         if conn:
             conn.close()
-
 
 
 @app.route("/getTimetable/<user_id>", methods=["GET"])
@@ -285,7 +280,7 @@ def login():
         cursor = conn.cursor()
 
         # Check if the user exists
-        query = f"SELECT role FROM users WHERE username = '{email}' AND password = '{password}';"
+        query = f"SELECT role FROM users WHERE email = '{email}' AND password = '{password}';"
         cursor.execute(query)
         result = cursor.fetchone()
 
@@ -337,7 +332,6 @@ def register():
             cursor.close()
         if conn:
             conn.close()
-
 
 
 if __name__ == '__main__':
