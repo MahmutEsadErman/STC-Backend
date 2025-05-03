@@ -72,6 +72,8 @@ def save_timetable():
 
 @app.route("/sendTimetable", methods=["POST"])
 def send_timetable():
+    conn = None
+    cursor = None
     try:
         # Get userId
         user_id = request.json["userId"]
@@ -116,12 +118,15 @@ def send_timetable():
 
 @app.route("/getTimetable", methods=["GET"])
 def get_timetable():
+    conn = None
+    cursor = None
     try:
         # Get userId
         user_id = request.json["userId"]
 
         query = f" SELECT * FROM work_time_sheet WHERE user_id = {user_id}; "
 
+        print("hello")
         # Establish connection
         conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
 
@@ -134,6 +139,7 @@ def get_timetable():
         # Fetch results
         results = cursor.fetchall()
 
+        print("hello")
         # Process results
         response = []
         for i in results:
@@ -158,8 +164,10 @@ def get_timetable():
         return make_response(jsonify('{error:' + str(e) + '}'), 404)
     finally:
         # Clean up
-        cursor.close()
-        conn.close()
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 
 # Supervisor approves or rejects the timetable
