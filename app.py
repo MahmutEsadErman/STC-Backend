@@ -103,15 +103,16 @@ def send_timetable():
         query = f"""
             UPDATE work_time_sheet
             SET status = '{new_status}'
-            WHERE user_id = {user_id} AND status = 'pending'; 
+            WHERE user_id = {user_id} AND status = 'pending';
         """
 
+        cursor.execute(query)
+
         # Notification for the supervisor
-        query += f""" INSERT INTO notification (timestamp, reciever_id, submitter_id, type, status, empl_id, message) 
+        query = f"""INSERT INTO notification (timestamp, reciever_id, submitter_id, type, status, empl_id, message) 
         VALUES (current_date, {supervisor_id}, {user_id}, {NotificationTypes.SEND_TIMETABLE}, 0, {user_id}, '{comment}');
         """
 
-        # Execute the query
         cursor.execute(query)
 
         # Commit the changes
