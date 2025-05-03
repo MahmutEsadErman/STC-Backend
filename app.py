@@ -88,7 +88,7 @@ def send_timetable():
         # Get userId
         user_id = request.json["userId"]
         comment = request.json["comment"]
-        new_status = "pending"
+        new_status = "sent"
 
         # Establish connection
         conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
@@ -187,7 +187,7 @@ def respond_timetable():
         user_id = request.json["userId"]
         employee_id = request.json["employeeId"]
         timetable_id = request.json["timetableId"]
-        response = request.json["response"]  # "approve" or "reject"
+        response = request.json["response"]  # "approved" or "denied"
         comment = request.json["comment"]
 
         # Establish connection
@@ -195,7 +195,7 @@ def respond_timetable():
         cursor = conn.cursor()
 
         # Determine the new status based on the response
-        new_status = "approved" if response else "rejected"
+        new_status = "approved" if response else "denied"
 
         # Update the timetable status
         query = f"""
