@@ -151,7 +151,7 @@ def get_timetable(user_id):
             response.append({
                 "userId": i[0],
                 "workDate": i[1].strftime("%Y-%m-%d"),
-                "startTime": str(i[2]),
+                "startTime": i[2].strftime("%H:%M"),
                 "endTime": str(i[3]),
                 "breakTime": str(i[4]),
                 "hoursTarget": str(i[5]),
