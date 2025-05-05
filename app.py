@@ -156,8 +156,8 @@ def get_timetable(user_id):
                 "breakTime": "" if i[4] is None else str(i[4])[:-3],
                 "hoursTarget": "" if i[5] is None else str(i[5])[:-3],
                 "hoursAsIs": "" if i[6] is None else str(i[6])[:-3],
-                "absence": i[7],
-                "comment": i[8],
+                "absence": "" if i[7] is None else str(i[7])[:-3],
+                "comment": "" if i[8] is None else str(i[8])[:-3],
                 "status": i[9]
             })
 
