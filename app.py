@@ -116,7 +116,7 @@ def save_timetable():
                 begin = {start_time},
                 end = {end_time},
                 break_time = {break_time},
-                hoursAsIs = {hoursAsIs},
+                hours_as_is = {hoursAsIs},
                 hours_target = {hours_target},
                 absence = {absence},
                 comment = '{comment}',
