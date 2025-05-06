@@ -603,8 +603,6 @@ def login():
         if result is None:
             return make_response(jsonify('{error: user not found}'), 404)
             
-        user_id = cursor.fetchall()[0][0]
-
         if result[1] == "employee":
             query = f"select group_id from employee where user_id = {user_id};"
         elif result[1] == "supervisor":            
