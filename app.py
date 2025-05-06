@@ -441,10 +441,13 @@ def respond_vacation():
     try:
         # Get data from the request
         user_id = request.json["userId"]
-        employee_id = request.json["employeeId"]
         begin_date = datetime.datetime.strptime(request.json["beginDate"], "%Y-%m-%d")
         end_date = datetime.datetime.strptime(request.json["endDate"], "%Y-%m-%d")
+        
+        employee_id = request.json["employeeId"]
+        requestId = request.json["requestId"]
         response = request.json["response"]  # "approved" or "denied"
+        commentResponse = request.json["comment"]
 
         # Establish connection
         conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
@@ -453,16 +456,16 @@ def respond_vacation():
         # Determine the new status based on the response
 
         if response:
-            comment = f"{employee_id} vacation request approved"
+            comment = f"Your vacation request from {begin_date} to {end_date} is approved"
             absence = "vacation"
         else:
-            comment = f"{employee_id} vacation request denied"
+            comment = f"your vacation request from {begin_date} to {end_date} is denied"
             absence = "no"
 
         query = f"""
             UPDATE work_time_sheet
             SET absence = '{absence}'
-            WHERE user_id = {user_id} AND date BETWEEN '{begin_date}' AND '{end_date}' AND DAYOFWEEK(date) NOT IN (1, 7);
+            WHERE user_id = {employee_id} AND date BETWEEN '{begin_date}' AND '{end_date}' AND DAYOFWEEK(date) NOT IN (1, 7);
         """
         cursor.execute(query)
 
@@ -475,8 +478,8 @@ def respond_vacation():
         cursor.execute(query)
 
         query = f"""UPDATE vacation_request
-        SET status = {1 if response else 2}
-        WHERE user_id = {user_id} AND date BETWEEN '{begin_date}' AND '{end_date}' AND DAYOFWEEK(date) NOT IN (1, 7);
+        SET status = {1 if response else 2},reasons_for_rejection = '{commentResponse}'
+        WHERE request_id = {requestId};
         """
 
         cursor.execute(query)
