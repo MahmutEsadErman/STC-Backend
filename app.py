@@ -230,17 +230,17 @@ def respond_timetable():
             conn.close()
 
 
-@app.route("/sendVacation", methods=["POST"])
-def send_vacation():
+@app.route("/send_absence_request", methods=["POST"])
+def send_absence_request():
     conn = None
     cursor = None
     try:
         # Get userId
         user_id = request.json["userId"]
         name = request.json["name"]
+        absence = request.json["absence"]
         begin_date = datetime.datetime.strptime(request.json["beginDate"], "%Y-%m-%d")
         end_date = datetime.datetime.strptime(request.json["endDate"], "%Y-%m-%d")
-        new_status = "sent"
 
         # Establish connection
         conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
@@ -251,28 +251,44 @@ def send_vacation():
         cursor.execute(query)
         supervisor_id = cursor.fetchall()[0][0]
 
+        # Determine the new status based on the absence type
+        if absence == "sick":
+            new_status = "approved"
+            notification_type = NotificationTypes.SICKNESS
+        else:
+            new_status = "sent"
+            notification_type = NotificationTypes.VOCATION
+
         # Update the status of the work time sheet
         query = f"""
             UPDATE work_time_sheet
-            SET status = '{new_status}'
+            SET (status = '{new_status}', absence = '{absence}')
             WHERE user_id = {user_id} AND status = 'pending' AND work_date BETWEEN '{begin_date}' AND '{end_date}';
         """
 
         cursor.execute(query)
 
-        comment = f"{user_id} sent the timesheet for approval from {begin_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}"
+        comment = f"{name} sent {absence} request for approval from {begin_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}"
 
         # Notification for the supervisor
         query = f"""INSERT INTO notification (timestamp, receiver_id, submitter_id, type, status, empl_id, message) 
-        VALUES (current_date, {supervisor_id}, {user_id}, {NotificationTypes.SEND_TIMETABLE}, 0, {user_id}, '{comment}');
+        VALUES (current_date, {supervisor_id}, {user_id}, {notification_type}, 0, {user_id}, '{comment}');
         """
 
         cursor.execute(query)
 
+        # NOT: hastalıkta hr a bilgilendirme yapılıyor ama rastgele bir hr seçiliyor. :)
+        if absence == "sick":
+            query = f"""INSERT INTO notification (timestamp, receiver_id, submitter_id, type, status, empl_id, message) 
+            VALUES (current_date, (SELECT user_id FROM users WHERE role='HR' LIMIT 1), {user_id}, {notification_type}, 0, {user_id}, '{comment}');
+            """
+
+            cursor.execute(query)
+
         # Commit the changes
         conn.commit()
 
-        return make_response(jsonify('{success: work timesheet sent to the supervisor}'), 200)
+        return make_response(jsonify('{success: absence request sent to the supervisor}'), 200)
     except Exception as e:
         return make_response(jsonify('{error:' + str(e) + '}'), 404)
     finally:
@@ -281,6 +297,55 @@ def send_vacation():
             cursor.close()
         if conn:
             conn.close()
+
+@app.route("/respond_vacation", methods=["POST"])
+def respond_vacation():
+    conn = None
+    cursor = None
+    try:
+        # Get data from the request
+        user_id = request.json["userId"]
+        employee_id = request.json["employeeId"]
+        date = datetime.datetime.strptime(request.json["date"], "%Y-%m-%d %H:%M:%S.%f")
+        response = request.json["response"]  # "approved" or "denied"
+        comment = request.json["comment"]
+
+        # Establish connection
+        conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
+        cursor = conn.cursor()
+
+        # Determine the new status based on the response
+        new_status = "approved" if response else "denied"
+
+        # Update the timetable status
+        query = f"""
+            UPDATE work_time_sheet
+            SET status = '{new_status}'
+            WHERE date = '{date}' AND user_id = {user_id};
+        """
+        cursor.execute(query)
+
+        # Add a notification for the employee
+        query = f"""
+            INSERT INTO notification (timestamp, receiver_id, submitter_id, type, status, empl_id, message)
+            VALUES (current_date, {employee_id}, {user_id}, {NotificationTypes.VOCATION_APPROVAL if response else NotificationTypes.VOCATION_REJECTION}, 0, {employee_id}, '{comment}');
+        """
+        cursor.execute(query)
+
+        # Commit the changes
+        conn.commit()
+
+        return make_response(jsonify('{success: vacation response recorded}'), 200)
+    except Exception as e:
+        return make_response(jsonify('{error:' + str(e) + '}'), 404)
+    finally:
+        # Clean up
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
 
 @app.route("/notifications/<user_id>", methods=["GET"])
 def get_notifications(user_id):
