@@ -8,16 +8,10 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-# Database connection details
-# host = os.environ.get("HOST")
-# userDb = os.environ.get("USER")
-# passDb = os.environ.get("PASS")
-# db = os.environ.get("DB")
-
-host = "MYSQL1002.site4now.net"
-userDb = "ab83bf_stcadmi"
-passDb = "Turkiye1461."
-db = "db_ab83bf_stcadmi"
+host = os.environ.get("HOST")
+userDb = os.environ.get("USER")
+passDb = os.environ.get("PASS")
+db = os.environ.get("DB")
 
 class NotificationTypes:
     SEND_TIMETABLE = 1
