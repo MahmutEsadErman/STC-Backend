@@ -616,7 +616,10 @@ def register():
         for i in range(1, 31):
             date = datetime.date(2025, 5, i)
             query += f"({user_id}, '{date}', '{absence}', '{status}'),"
-
+         
+        cursor.execute(query)
+        conn.commit()
+        
         return make_response(jsonify('{success: user registered}'), 200)
     except Exception as e:
         return make_response(jsonify('{error:' + str(e) + '}'), 404)
