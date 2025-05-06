@@ -372,8 +372,8 @@ def send_vacation():
 
         cursor.execute(query)
 
-        query = f"""INSERT INTO vacation_request (emp_id, start_date, end_time, status, request_timestamp) 
-        VALUES ({user_id}, '{begin_date}', '{end_date}', 0, current_date);
+        query = f"""INSERT INTO vacation_request (emp_id,sup_id, start_date, end_time, status, request_timestamp) 
+        VALUES ({user_id},{supervisor_id} ,'{begin_date}', '{end_date}', 0, current_date);
         """
 
         cursor.execute(query)
