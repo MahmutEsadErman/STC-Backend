@@ -286,9 +286,9 @@ def respond_timetable():
         # Get data from the request
         user_id = request.json["userId"]
         employee_id = request.json["employeeId"]
-        date = datetime.datetime.strptime(request.json["date"], "%Y-%m-%d %H:%M:%S.%f")
+        startDate = datetime.datetime.strptime(request.json["startDate"], "%Y-%m-%d")
+        endDate = datetime.datetime.strptime(request.json["endDate"], "%Y-%m-%d")
         response = request.json["response"]  # "approved" or "denied"
-        comment = request.json["comment"]
 
         # Establish connection
         conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
@@ -301,10 +301,10 @@ def respond_timetable():
         query = f"""
             UPDATE work_time_sheet
             SET status = '{new_status}'
-            WHERE date = '{date}' AND user_id = {user_id};
+            WHERE user_id = {user_id} AND date BETWEEN '{begin_date}' AND '{end_date}';
         """
         cursor.execute(query)
-
+        comment = f"Your timetable is $new_status!"
         # Add a notification for the employee
         query = f"""
             INSERT INTO notification (timestamp, receiver_id, submitter_id, type, status, empl_id, message)
