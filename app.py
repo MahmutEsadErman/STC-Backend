@@ -54,13 +54,16 @@ def save_timetable():
             absence = entry["absence"]
             comment = entry["comment"]
             status = "pending"
+            start_time = f"'{entry['startTime']}'" if entry["startTime"] else "NULL"
+            end_time = f"'{entry['endTime']}'" if entry["endTime"] else "NULL"
+            break_time = f"'{entry['breakTime']}'" if entry["breakTime"] else "NULL"
+            hours_target = f"'{entry['hoursTarget']}'" if entry["hoursTarget"] else "NULL"
 
             query = f"""UPDATE work_time_sheet SET
-                begin = '{start_time}',
-                end = '{end_time}',
-                break_time = '{break_time}',
-                hours_target = '{hours_target}',
-                hours_as_is = '{hours_as_is}',
+                begin = {start_time},
+                end = {end_time},
+                break_time = {break_time},
+                hours_target = {hours_target},
                 absence = '{absence}',
                 comment = '{comment}',
                 status = '{status}'
