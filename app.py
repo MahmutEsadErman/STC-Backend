@@ -46,14 +46,9 @@ def save_timetable():
         for entry in timesheet:
             user_id = entry["userId"]
             work_date = entry["workDate"]
-            start_time = entry["startTime"]
-            end_time = entry["endTime"]
-            break_time = entry["breakTime"]
-            hours_target = entry["hoursTarget"]
-            hours_as_is = entry["hoursAsIs"]
-            absence = entry["absence"]
             comment = entry["comment"]
             status = "pending"
+            absence = f"'{entry['absence']}'" if entry["absence"].strip() else "NULL"
             start_time = f"'{entry['startTime']}'" if entry["startTime"] else "NULL"
             end_time = f"'{entry['endTime']}'" if entry["endTime"] else "NULL"
             break_time = f"'{entry['breakTime']}'" if entry["breakTime"] else "NULL"
@@ -64,7 +59,7 @@ def save_timetable():
                 end = {end_time},
                 break_time = {break_time},
                 hours_target = {hours_target},
-                absence = '{absence}',
+                absence = {absence},
                 comment = '{comment}',
                 status = '{status}'
                 WHERE user_id = {user_id} AND date = '{work_date}'; 
