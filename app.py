@@ -352,6 +352,73 @@ def send_absence_request():
         if conn:
             conn.close()
 
+@app.route("/send_vacation", methods=["POST"])
+def send_vacation():
+    conn = None
+    cursor = None
+    try:
+        # Get userId
+        user_id = request.json["userId"]
+        name = request.json["name"]
+        absence = request.json["absence"]
+        begin_date = datetime.datetime.strptime(request.json["beginDate"], "%Y-%m-%d")
+        end_date = datetime.datetime.strptime(request.json["endDate"], "%Y-%m-%d")
+
+        # Establish connection
+        conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
+        cursor = conn.cursor()
+
+        # Get the supervisor's user_id
+        query = f"SELECT user_id FROM supervisor WHERE group_id = (SELECT group_id FROM employee WHERE user_id = {user_id});"
+        cursor.execute(query)
+        supervisor_id = cursor.fetchall()[0][0]
+
+        # Determine the new status based on the absence type
+        if absence == "sick":
+            notification_type = NotificationTypes.SICKNESS
+        elif absence == "vacation":
+            notification_type = NotificationTypes.VOCATION
+
+        # Update the status of the work time sheet
+        query = f"""
+            UPDATE work_time_sheet
+            SET absence = '{absence}'
+            WHERE user_id = {user_id} AND date BETWEEN '{begin_date}' AND '{end_date}';
+        """
+        # hafta sonlarını çıkar
+
+        cursor.execute(query)
+
+        comment = f"{name} sent {absence} request for approval from {begin_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}"
+
+        # Notification for the supervisor
+        query = f"""INSERT INTO notification (timestamp, receiver_id, submitter_id, type, status, empl_id, message) 
+        VALUES (current_date, {supervisor_id}, {user_id}, {notification_type}, 0, {user_id}, '{comment}');
+        """
+
+        cursor.execute(query)
+
+        # NOT: hastalıkta hr a bilgilendirme yapılıyor ama rastgele bir hr seçiliyor. :)
+        if absence == "sick":
+            query = f"""INSERT INTO notification (timestamp, receiver_id, submitter_id, type, status, empl_id, message) 
+            VALUES (current_date, (SELECT user_id FROM users WHERE role='HR' LIMIT 1), {user_id}, {notification_type}, 0, {user_id}, '{comment}');
+            """
+
+            cursor.execute(query)
+
+        # Commit the changes
+        conn.commit()
+
+        return make_response(jsonify('{success: absence request sent to the supervisor}'), 200)
+    except Exception as e:
+        return make_response(jsonify('{error:' + str(e) + '}'), 404)
+    finally:
+        # Clean up
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
 @app.route("/respond_vacation", methods=["POST"])
 def respond_vacation():
     conn = None
@@ -535,6 +602,7 @@ def register():
         name = request.json["name"]
         lastname = request.json["lastname"]
         role = request.json["role"]
+        group_id = request.json["groupId"]
 
         # Establish connection
         conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
@@ -545,6 +613,13 @@ def register():
         cursor.execute(query)
 
         # Commit the changes
+        conn.commit()
+
+        if role == "employee":
+            query = f"INSERT INTO employee group_id VALUES {group_id};"
+        elif role == "supervisor":
+            query = f"INSERT INTO supervisor group_id VALUES {group_id};"
+        cursor.execute(query)
         conn.commit()
 
         query = f"SELECT user_id FROM users WHERE email={email};"
