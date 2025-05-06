@@ -30,6 +30,59 @@ def database_deneme():
     return "hello world"
 
 
+@app.route("/getUsers", methods=["GET"])
+def get_users():
+    conn = None
+    cursor = None
+    try:
+        # Establish connection
+        conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
+
+        # Create a cursor to interact with the database
+        cursor = conn.cursor()
+
+        # Execute the query
+        cursor.execute("""SELECT users.user_id, group_id, name, lastname, role
+                        FROM users
+                        LEFT JOIN (
+                            SELECT * FROM employee
+                        UNION
+                        SELECT * FROM supervisor
+                        ) AS combined ON users.user_id = combined.user_id
+                        WHERE users.role != 'HR'
+                        GROUP BY users.user_id
+        """)
+
+        # Fetch results
+        results = cursor.fetchall()
+
+        # Fetch results
+        results = cursor.fetchall()
+
+        # Process results
+        response = []
+        for i in results:
+            response.append({
+                "userId": i[0],
+                "name": i[1],
+                "lastname": i[2],
+                "role": i[3],
+                "groupId": i[4]
+            })
+
+        if not response:
+            return make_response(jsonify('{error: subject not found}'), 404)
+
+        return make_response(jsonify(response), 200)
+    except Exception as e:
+        return make_response(jsonify('{error:' + str(e) + '}'), 404)
+    finally:
+        # Clean up
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
 @app.route("/saveTimetable", methods=["POST"])
 def save_timetable():
     conn = None
@@ -255,18 +308,17 @@ def send_absence_request():
 
         # Determine the new status based on the absence type
         if absence == "sick":
-            new_status = "approved"
             notification_type = NotificationTypes.SICKNESS
-        else:
-            new_status = "sent"
+        elif absence == "vacation":
             notification_type = NotificationTypes.VOCATION
 
         # Update the status of the work time sheet
         query = f"""
             UPDATE work_time_sheet
-            SET (status = '{new_status}', absence = '{absence}')
-            WHERE user_id = {user_id} AND status = 'pending' AND work_date BETWEEN '{begin_date}' AND '{end_date}';
+            SET absence = '{absence}'
+            WHERE user_id = {user_id} AND date BETWEEN '{begin_date}' AND '{end_date}';
         """
+        # hafta sonlarını çıkar
 
         cursor.execute(query)
 
