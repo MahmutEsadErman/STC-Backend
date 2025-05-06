@@ -9,11 +9,15 @@ app = Flask(__name__)
 CORS(app)
 
 # Database connection details
-host = os.environ.get("HOST")
-userDb = os.environ.get("USER")
-passDb = os.environ.get("PASS")
-db = os.environ.get("DB")
+# host = os.environ.get("HOST")
+# userDb = os.environ.get("USER")
+# passDb = os.environ.get("PASS")
+# db = os.environ.get("DB")
 
+host = "MYSQL1002.site4now.net"
+userDb = "ab83bf_stcadmi"
+passDb = "Turkiye1461."
+db = "db_ab83bf_stcadmi"
 
 class NotificationTypes:
     SEND_TIMETABLE = 1
@@ -159,7 +163,7 @@ def send_timetable():
         query = f"""
             UPDATE work_time_sheet
             SET status = '{new_status}'
-            WHERE user_id = {user_id} AND status = 'pending' AND date BETWEEN '{begin_date}' AND '{end_date}';
+            WHERE user_id = {user_id} AND status = 'pending' AND date BETWEEN '{begin_date}' AND '{end_date}' AND DAYOFWEEK(date) NOT IN (1, 7);
         """
 
         cursor.execute(query)
@@ -285,17 +289,18 @@ def respond_timetable():
             conn.close()
 
 
-@app.route("/send_absence_request", methods=["POST"])
-def send_absence_request():
+@app.route("/send_sickness", methods=["POST"])
+def send_sickness():
     conn = None
     cursor = None
     try:
         # Get userId
         user_id = request.json["userId"]
         name = request.json["name"]
-        absence = request.json["absence"]
         begin_date = datetime.datetime.strptime(request.json["beginDate"], "%Y-%m-%d")
         end_date = datetime.datetime.strptime(request.json["endDate"], "%Y-%m-%d")
+
+        absence = "sickness"
 
         # Establish connection
         conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
@@ -306,43 +311,31 @@ def send_absence_request():
         cursor.execute(query)
         supervisor_id = cursor.fetchall()[0][0]
 
-        # Determine the new status based on the absence type
-        if absence == "sick":
-            notification_type = NotificationTypes.SICKNESS
-        elif absence == "vacation":
-            notification_type = NotificationTypes.VOCATION
+        notification_type = NotificationTypes.SICKNESS
 
         # Update the status of the work time sheet
         query = f"""
             UPDATE work_time_sheet
             SET absence = '{absence}'
-            WHERE user_id = {user_id} AND date BETWEEN '{begin_date}' AND '{end_date}';
+            WHERE user_id = {user_id} AND date BETWEEN '{begin_date}' AND '{end_date}' AND DAYOFWEEK(date) NOT IN (1, 7);
         """
-        # hafta sonlarını çıkar
 
         cursor.execute(query)
 
-        comment = f"{name} sent {absence} request for approval from {begin_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}"
+        comment = f"{name} sent sickness notification from {begin_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}"
 
         # Notification for the supervisor
         query = f"""INSERT INTO notification (timestamp, receiver_id, submitter_id, type, status, empl_id, message) 
-        VALUES (current_date, {supervisor_id}, {user_id}, {notification_type}, 0, {user_id}, '{comment}');
+        VALUES (current_date, {supervisor_id}, {user_id}, {notification_type}, 0, {user_id}, '{comment}'),
+        (current_date, (SELECT user_id FROM users WHERE role='HR' LIMIT 1), {user_id}, {notification_type}, 0, {user_id}, '{comment}');
         """
 
         cursor.execute(query)
-
-        # NOT: hastalıkta hr a bilgilendirme yapılıyor ama rastgele bir hr seçiliyor. :)
-        if absence == "sick":
-            query = f"""INSERT INTO notification (timestamp, receiver_id, submitter_id, type, status, empl_id, message) 
-            VALUES (current_date, (SELECT user_id FROM users WHERE role='HR' LIMIT 1), {user_id}, {notification_type}, 0, {user_id}, '{comment}');
-            """
-
-            cursor.execute(query)
 
         # Commit the changes
         conn.commit()
 
-        return make_response(jsonify('{success: absence request sent to the supervisor}'), 200)
+        return make_response(jsonify('{success: absence request sent to the supervisor and HR}'), 200)
     except Exception as e:
         return make_response(jsonify('{error:' + str(e) + '}'), 404)
     finally:
@@ -352,6 +345,7 @@ def send_absence_request():
         if conn:
             conn.close()
 
+
 @app.route("/send_vacation", methods=["POST"])
 def send_vacation():
     conn = None
@@ -360,7 +354,6 @@ def send_vacation():
         # Get userId
         user_id = request.json["userId"]
         name = request.json["name"]
-        absence = request.json["absence"]
         begin_date = datetime.datetime.strptime(request.json["beginDate"], "%Y-%m-%d")
         end_date = datetime.datetime.strptime(request.json["endDate"], "%Y-%m-%d")
 
@@ -373,23 +366,10 @@ def send_vacation():
         cursor.execute(query)
         supervisor_id = cursor.fetchall()[0][0]
 
-        # Determine the new status based on the absence type
-        if absence == "sick":
-            notification_type = NotificationTypes.SICKNESS
-        elif absence == "vacation":
-            notification_type = NotificationTypes.VOCATION
+        absence = "vacation"
+        notification_type = NotificationTypes.VOCATION
 
-        # Update the status of the work time sheet
-        query = f"""
-            UPDATE work_time_sheet
-            SET absence = '{absence}'
-            WHERE user_id = {user_id} AND date BETWEEN '{begin_date}' AND '{end_date}';
-        """
-        # hafta sonlarını çıkar
-
-        cursor.execute(query)
-
-        comment = f"{name} sent {absence} request for approval from {begin_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}"
+        comment = f"{name} sent vacation request for approval from {begin_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}"
 
         # Notification for the supervisor
         query = f"""INSERT INTO notification (timestamp, receiver_id, submitter_id, type, status, empl_id, message) 
@@ -398,13 +378,9 @@ def send_vacation():
 
         cursor.execute(query)
 
-        # NOT: hastalıkta hr a bilgilendirme yapılıyor ama rastgele bir hr seçiliyor. :)
-        if absence == "sick":
-            query = f"""INSERT INTO notification (timestamp, receiver_id, submitter_id, type, status, empl_id, message) 
-            VALUES (current_date, (SELECT user_id FROM users WHERE role='HR' LIMIT 1), {user_id}, {notification_type}, 0, {user_id}, '{comment}');
-            """
-
-            cursor.execute(query)
+        query = f"""INSERT INTO vacation_request (emp_id, start_date, end_time, type, status, empl_id, message) 
+        VALUES (current_date, {supervisor_id}, {user_id}, {notification_type}, 0, {user_id}, '{comment}');
+        """
 
         # Commit the changes
         conn.commit()
@@ -439,6 +415,12 @@ def respond_vacation():
         new_status = "approved" if response else "denied"
 
         # Update the timetable status
+        # Update the status of the work time sheet
+        # query = f"""
+        #     UPDATE work_time_sheet
+        #     SET absence = '{absence}'
+        #     WHERE user_id = {user_id} AND date BETWEEN '{begin_date}' AND '{end_date}' AND DAYOFWEEK(date) NOT IN (1, 7);
+        # """
         query = f"""
             UPDATE work_time_sheet
             SET status = '{new_status}'
@@ -615,20 +597,22 @@ def register():
         # Commit the changes
         conn.commit()
 
-        if role == "employee":
-            query = f"INSERT INTO employee group_id VALUES {group_id};"
-        elif role == "supervisor":
-            query = f"INSERT INTO supervisor group_id VALUES {group_id};"
-        cursor.execute(query)
-        conn.commit()
-
-        query = f"SELECT user_id FROM users WHERE email={email};"
+        query = f"SELECT user_id FROM users WHERE email='{email}';"
         cursor.execute(query)
         user_id = cursor.fetchall()[0][0]
 
+        if role == "employee":
+            query = f"INSERT INTO employee (user_id, group_id) VALUES ({user_id}, {group_id});"
+        elif role == "supervisor":
+            query = f"INSERT INTO supervisor (user_id, group_id) VALUES ({user_id}, {group_id});"
+        cursor.execute(query)
+        conn.commit()
+
+
+
         absence = "no"
         status = "pending"
-        query = "INSERT INTO work_time_sheet (user_id, date, absence,status) VALUES"
+        query = "INSERT INTO work_time_sheet (user_id, date, absence,status) VALUES "
         for i in range(1, 31):
             date = datetime.date(2025, 5, i)
             query += f"({user_id}, '{date}', '{absence}', '{status}'),"
