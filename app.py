@@ -417,14 +417,14 @@ def respond_vacation():
 
         if response:
             comment = f"{employee_id} vacation request approved"
-            new_status = "approved"
+            absence = "vacation"
         else:
             comment = f"{employee_id} vacation request denied"
-            new_status = "pending"
+            absence = "no"
 
         query = f"""
             UPDATE work_time_sheet
-            SET status = '{new_status}'
+            SET absence = '{absence}'
             WHERE user_id = {user_id} AND date BETWEEN '{begin_date}' AND '{end_date}' AND DAYOFWEEK(date) NOT IN (1, 7);
         """
         cursor.execute(query)
