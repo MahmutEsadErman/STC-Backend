@@ -233,6 +233,52 @@ def get_timetable(user_id):
         if conn:
             conn.close()
 
+@app.route("/getVacationRequests/<user_id>", methods=["GET"])
+def get_vacation_requests(user_id):
+    conn = None
+    cursor = None
+    try:
+        query = f" SELECT * FROM vacation_request WHERE sup_id = {user_id}; "
+
+        # Establish connection
+        conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
+
+        # Create a cursor to interact with the database
+        cursor = conn.cursor()
+
+        # Execute the query
+        cursor.execute(query)
+
+        # Fetch results
+        results = cursor.fetchall()
+
+        # Process results
+        response = []
+        for i in results:
+            response.append({
+                "request_id": i[0],
+                "emp_id": i[1],
+                "start_date": i[2].strftime("%Y-%m-%d") if i[2] else None,
+                "end_time": i[3].strftime("%Y-%m-%d") if i[3] else None,
+                "status": i[4],
+                "request_timestamp": str(i[5])[:-3] if i[5] else None,
+                "reasons_for_rejection": i[6] if i[6] else "",
+                "sup_id": i[7]
+            })
+
+
+        if not response:
+            return make_response(jsonify('{error: vacation not found}'), 404)
+
+        return make_response(jsonify(response), 200)
+    except Exception as e:
+        return make_response(jsonify('{error:' + str(e) + '}'), 404)
+    finally:
+        # Clean up
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 # Supervisor approves or rejects the timetable
 @app.route("/respond_timetable", methods=["POST"])
