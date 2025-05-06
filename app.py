@@ -378,14 +378,16 @@ def send_vacation():
 
         cursor.execute(query)
 
-        query = f"""INSERT INTO vacation_request (emp_id, start_date, end_time, type, status, empl_id, message) 
-        VALUES (current_date, {supervisor_id}, {user_id}, {notification_type}, 0, {user_id}, '{comment}');
+        query = f"""INSERT INTO vacation_request (emp_id, start_date, end_time, status, request_timestamp) 
+        VALUES ({user_id}, '{begin_date}', '{end_date}', 0, current_date);
         """
+
+        cursor.execute(query)
 
         # Commit the changes
         conn.commit()
 
-        return make_response(jsonify('{success: absence request sent to the supervisor}'), 200)
+        return make_response(jsonify('{success: vacation request sent to the supervisor}'), 200)
     except Exception as e:
         return make_response(jsonify('{error:' + str(e) + '}'), 404)
     finally:
@@ -403,36 +405,43 @@ def respond_vacation():
         # Get data from the request
         user_id = request.json["userId"]
         employee_id = request.json["employeeId"]
-        date = datetime.datetime.strptime(request.json["date"], "%Y-%m-%d %H:%M:%S.%f")
+        begin_date = datetime.datetime.strptime(request.json["beginDate"], "%Y-%m-%d")
+        end_date = datetime.datetime.strptime(request.json["endDate"], "%Y-%m-%d")
         response = request.json["response"]  # "approved" or "denied"
-        comment = request.json["comment"]
 
         # Establish connection
         conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
         cursor = conn.cursor()
 
         # Determine the new status based on the response
-        new_status = "approved" if response else "denied"
 
-        # Update the timetable status
-        # Update the status of the work time sheet
-        # query = f"""
-        #     UPDATE work_time_sheet
-        #     SET absence = '{absence}'
-        #     WHERE user_id = {user_id} AND date BETWEEN '{begin_date}' AND '{end_date}' AND DAYOFWEEK(date) NOT IN (1, 7);
-        # """
+        if response:
+            comment = f"{employee_id} vacation request approved"
+            new_status = "approved"
+        else:
+            comment = f"{employee_id} vacation request denied"
+            new_status = "pending"
+
         query = f"""
             UPDATE work_time_sheet
             SET status = '{new_status}'
-            WHERE date = '{date}' AND user_id = {user_id};
+            WHERE user_id = {user_id} AND date BETWEEN '{begin_date}' AND '{end_date}' AND DAYOFWEEK(date) NOT IN (1, 7);
         """
         cursor.execute(query)
 
         # Add a notification for the employee
         query = f"""
             INSERT INTO notification (timestamp, receiver_id, submitter_id, type, status, empl_id, message)
-            VALUES (current_date, {employee_id}, {user_id}, {NotificationTypes.VOCATION_APPROVAL if response else NotificationTypes.VOCATION_REJECTION}, 0, {employee_id}, '{comment}');
+            VALUES (current_date, {employee_id}, {user_id}, {NotificationTypes.VOCATION_APPROVAL if response else NotificationTypes.VOCATION_REJECTION}, 0, {employee_id}, '{comment}'),
+            (current_date, (SELECT user_id FROM users WHERE role='HR' LIMIT 1), {user_id}, {NotificationTypes.VOCATION_APPROVAL if response else NotificationTypes.VOCATION_REJECTION}, 0, {employee_id}, '{comment}');
         """
+        cursor.execute(query)
+
+        query = f"""UPDATE vacation_request
+        SET status = '{new_status}'
+        WHERE user_id = {user_id} AND date BETWEEN '{begin_date}' AND '{end_date}' AND DAYOFWEEK(date) NOT IN (1, 7);
+        """
+
         cursor.execute(query)
 
         # Commit the changes
@@ -607,8 +616,6 @@ def register():
             query = f"INSERT INTO supervisor (user_id, group_id) VALUES ({user_id}, {group_id});"
         cursor.execute(query)
         conn.commit()
-
-
 
         absence = "no"
         status = "pending"
