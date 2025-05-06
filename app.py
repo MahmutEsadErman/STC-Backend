@@ -52,12 +52,14 @@ def save_timetable():
             start_time = f"'{entry['startTime']}'" if entry["startTime"] else "NULL"
             end_time = f"'{entry['endTime']}'" if entry["endTime"] else "NULL"
             break_time = f"'{entry['breakTime']}'" if entry["breakTime"] else "NULL"
+            hoursAsIs = f"'{entry['hoursAsIs']}'" if entry["hoursAsIs"] else "NULL"
             hours_target = f"'{entry['hoursTarget']}'" if entry["hoursTarget"] else "NULL"
 
             query = f"""UPDATE work_time_sheet SET
                 begin = {start_time},
                 end = {end_time},
                 break_time = {break_time},
+                hoursAsIs = {hoursAsIs},
                 hours_target = {hours_target},
                 absence = {absence},
                 comment = '{comment}',
@@ -104,7 +106,7 @@ def send_timetable():
         query = f"""
             UPDATE work_time_sheet
             SET status = '{new_status}'
-            WHERE user_id = {user_id} AND status = 'pending' AND work_date BETWEEN '{begin_date}' AND '{end_date}';
+            WHERE user_id = {user_id} AND status = 'pending' AND date BETWEEN '{begin_date}' AND '{end_date}';
         """
 
         cursor.execute(query)
