@@ -157,7 +157,7 @@ def send_timetable():
         query = f"""
             UPDATE work_time_sheet
             SET status = '{new_status}'
-            WHERE user_id = {user_id} AND status = 'pending' AND date BETWEEN '{begin_date}' AND '{end_date}' AND DAYOFWEEK(date) NOT IN (1, 7);
+            WHERE user_id = {user_id} AND status = 'pending' AND date BETWEEN '{begin_date}' AND '{end_date}';
         """
 
         cursor.execute(query)
