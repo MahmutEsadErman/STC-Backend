@@ -1,4 +1,5 @@
 import os
+import datetime
 
 import mysql.connector
 from flask import Flask, jsonify, make_response, request
@@ -12,7 +13,6 @@ host = os.environ.get("HOST")
 userDb = os.environ.get("USER")
 passDb = os.environ.get("PASS")
 db = os.environ.get("DB")
-
 
 
 class NotificationTypes:
@@ -35,7 +35,6 @@ def save_timetable():
     conn = None
     cursor = None
     try:
-        user_id = request.json["userId"]
         timesheet = request.json["timesheet"]
 
         # Establish connection
@@ -44,9 +43,8 @@ def save_timetable():
         # Create a cursor to interact with the database
         cursor = conn.cursor()
 
-        query = "INSERT INTO work_time_sheet VALUES"
-
         for entry in timesheet:
+            user_id = entry["userId"]
             work_date = entry["workDate"]
             start_time = entry["startTime"]
             end_time = entry["endTime"]
@@ -55,15 +53,21 @@ def save_timetable():
             hours_as_is = entry["hoursAsIs"]
             absence = entry["absence"]
             comment = entry["comment"]
-            status = entry["status"]
+            status = "pending"
 
-            query += f" ({user_id}, '{work_date}', '{start_time}', '{end_time}', '{break_time}', '{hours_target}', '{hours_as_is}', '{absence}', '{comment}', '{status}'),"
+            query = f"""UPDATE work_time_sheet SET
+                begin = '{start_time}',
+                end = '{end_time}',
+                break_time = '{break_time}',
+                hours_target = '{hours_target}',
+                hours_as_is = '{hours_as_is}',
+                absence = '{absence}',
+                comment = '{comment}',
+                status = '{status}'
+                WHERE user_id = {user_id} AND date = '{work_date}'; 
+            """
 
-        # Remove the last comma and add a semicolon
-        query = query[:-1] + ";"
-
-        cursor.execute(query)
-
+            cursor.execute(query)
         conn.commit()
 
         return make_response(jsonify('{success: work timesheet saved to the system}'), 200)
@@ -85,6 +89,8 @@ def send_timetable():
         # Get userId
         user_id = request.json["userId"]
         comment = request.json["comment"]
+        begin_date = datetime.datetime.strptime(request.json["beginDate"], "%Y-%m-%d")
+        end_date = datetime.datetime.strptime(request.json["endDate"], "%Y-%m-%d")
         new_status = "sent"
 
         # Establish connection
@@ -100,7 +106,7 @@ def send_timetable():
         query = f"""
             UPDATE work_time_sheet
             SET status = '{new_status}'
-            WHERE user_id = {user_id} AND status = 'pending';
+            WHERE user_id = {user_id} AND status = 'pending' AND work_date BETWEEN '{begin_date}' AND '{end_date}';
         """
 
         cursor.execute(query)
@@ -184,7 +190,7 @@ def respond_timetable():
         # Get data from the request
         user_id = request.json["userId"]
         employee_id = request.json["employeeId"]
-        date = request.json["date"]
+        date = datetime.datetime.strptime(request.json["date"], "%Y-%m-%d %H:%M:%S.%f")
         response = request.json["response"]  # "approved" or "denied"
         comment = request.json["comment"]
 
@@ -199,7 +205,7 @@ def respond_timetable():
         query = f"""
             UPDATE work_time_sheet
             SET status = '{new_status}'
-            WHERE date = {'date'} AND user_id = {user_id};
+            WHERE date = '{date}' AND user_id = {user_id};
         """
         cursor.execute(query)
 
@@ -245,7 +251,7 @@ def get_notifications(user_id):
         for i in results:
             response.append({
                 "notificationId": i[0],
-                "timestamp": i[1],
+                "timestamp": i[1].strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],
                 "receiverId": i[2],
                 "submitterId": i[3],
                 "type": i[4],
@@ -258,6 +264,48 @@ def get_notifications(user_id):
             return make_response(jsonify('{error: subject not found}'), 404)
 
         return make_response(jsonify(response), 200)
+    except Exception as e:
+        return make_response(jsonify('{error:' + str(e) + '}'), 404)
+    finally:
+        # Clean up
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+@app.route("/statistics", methods=["GET"])
+def statistics():
+    conn = None
+    cursor = None
+    try:
+        # Establish connection
+        conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
+        cursor = conn.cursor()
+
+        query = """SELECT date, AVG(TIMESTAMPDIFF(MINUTE, begin, end) - TIME_TO_SEC(break_time) / 60) AS avg_work_hours 
+                    FROM work_time_sheet
+                    WHERE status = 'approved'
+                    GROUP BY date;
+                 """
+
+        cursor.execute(query)
+
+        # Fetch results
+        results = cursor.fetchall()
+        # Process results
+        response = []
+        for i in results:
+            response.append({
+                "date": i[0].strftime("%Y-%m-%d"),
+                "avgWorkHours": str(i[1])[:-3] if i[1] else None
+            })
+
+        if not response:
+            return make_response(jsonify('{error: subject not found}'), 404)
+
+        return make_response(jsonify(response), 200)
+
     except Exception as e:
         return make_response(jsonify('{error:' + str(e) + '}'), 404)
     finally:
