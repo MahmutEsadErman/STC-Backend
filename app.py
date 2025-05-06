@@ -330,7 +330,7 @@ def login():
         cursor = conn.cursor()
 
         # Check if the user exists
-        query = f"SELECT user_id, role FROM users WHERE email = '{email}' AND password = '{password}';"
+        query = f"SELECT user_id, role, name, lastname FROM users WHERE email = '{email}' AND password = '{password}';"
         cursor.execute(query)
         result = cursor.fetchone()
 
@@ -338,7 +338,10 @@ def login():
             return make_response(jsonify('{error: user not found}'), 404)
         else:
             response = {'userId': result[0],
-                        'role': result[1]}
+                        'role': result[1],
+                        'name': result[2],
+                        'lastname': result[3]}
+
 
         return make_response(jsonify(response), 200)
     except Exception as e:
