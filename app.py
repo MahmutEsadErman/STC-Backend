@@ -54,9 +54,6 @@ def get_users():
         # Fetch results
         results = cursor.fetchall()
 
-        # Fetch results
-        results = cursor.fetchall()
-
         # Process results
         response = []
         for i in results:
