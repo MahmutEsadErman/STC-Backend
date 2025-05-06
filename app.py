@@ -599,14 +599,26 @@ def login():
         query = f"SELECT user_id, role, name, lastname FROM users WHERE email = '{email}' AND password = '{password}';"
         cursor.execute(query)
         result = cursor.fetchone()
-
+        
         if result is None:
             return make_response(jsonify('{error: user not found}'), 404)
-        else:
+            
+        user_id = cursor.fetchall()[0][0]
+
+        if result[1] == "employee":
+            query = f"select group_id from employee where user_id = {user_id};"
+        elif result[1] == "supervisor":            
+            query = f"select group_id from supervisor where user_id = {user_id};"
+        
+        cursor.execute(query)
+        group_id = 0
+        if result[1] != "HR":
+            group_id = cursor.fetchone()[0]
+        
             response = {'userId': result[0],
                         'role': result[1],
                         'name': result[2],
-                        'lastname': result[3]}
+                        'lastname': result[3],'grouId':group_id}
 
         return make_response(jsonify(response), 200)
     except Exception as e:
