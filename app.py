@@ -615,10 +615,10 @@ def login():
         if result[1] != "HR":
             group_id = cursor.fetchone()[0]
         
-            response = {'userId': result[0],
-                        'role': result[1],
-                        'name': result[2],
-                        'lastname': result[3],'grouId':group_id}
+        response = {'userId': result[0],
+                    'role': result[1],
+                    'name': result[2],
+                    'lastname': result[3],'grouId':group_id}
 
         return make_response(jsonify(response), 200)
     except Exception as e:
