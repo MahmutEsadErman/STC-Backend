@@ -432,7 +432,7 @@ def respond_vacation():
         cursor.execute(query)
 
         query = f"""UPDATE vacation_request
-        SET status = '{new_status}'
+        SET status = {1 if response else 2}
         WHERE user_id = {user_id} AND date BETWEEN '{begin_date}' AND '{end_date}' AND DAYOFWEEK(date) NOT IN (1, 7);
         """
 
