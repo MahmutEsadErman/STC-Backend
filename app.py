@@ -304,7 +304,7 @@ def respond_timetable():
             WHERE user_id = {user_id} AND date BETWEEN '{begin_date}' AND '{end_date}';
         """
         cursor.execute(query)
-        comment = f"Your timetable is $new_status!"
+        comment = f"Your timetable from {startDate.strftime('%Y-%m-%d')} to {endDate.strftime('%Y-%m-%d')} is $new_status!"
         # Add a notification for the employee
         query = f"""
             INSERT INTO notification (timestamp, receiver_id, submitter_id, type, status, empl_id, message)
