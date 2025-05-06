@@ -604,9 +604,9 @@ def login():
             return make_response(jsonify('{error: user not found}'), 404)
             
         if result[1] == "employee":
-            query = f"select group_id from employee where user_id = {user_id};"
+            query = f"select group_id from employee where user_id = {result[0]};"
         elif result[1] == "supervisor":            
-            query = f"select group_id from supervisor where user_id = {user_id};"
+            query = f"select group_id from supervisor where user_id = {result[0]};"
         
         cursor.execute(query)
         group_id = 0
