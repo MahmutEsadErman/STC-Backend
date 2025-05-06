@@ -104,7 +104,7 @@ def send_timetable():
         query = f"""
             UPDATE work_time_sheet
             SET status = '{new_status}'
-            WHERE user_id = {user_id} AND status = 'pending' AND work_date BETWEEN '{begin_date}' AND '{end_date}';
+            WHERE user_id = {user_id} AND status = 'pending' AND date BETWEEN '{begin_date}' AND '{end_date}';
         """
 
         cursor.execute(query)
