@@ -86,7 +86,7 @@ def send_timetable():
     try:
         # Get userId
         user_id = request.json["userId"]
-        comment = request.json["comment"]
+        name = request.json["name"]
         begin_date = datetime.datetime.strptime(request.json["beginDate"], "%Y-%m-%d")
         end_date = datetime.datetime.strptime(request.json["endDate"], "%Y-%m-%d")
         new_status = "sent"
@@ -108,6 +108,8 @@ def send_timetable():
         """
 
         cursor.execute(query)
+
+        comment = f"{name} sent the timesheet for approval from {begin_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}"
 
         # Notification for the supervisor
         query = f"""INSERT INTO notification (timestamp, receiver_id, submitter_id, type, status, empl_id, message) 
@@ -228,6 +230,58 @@ def respond_timetable():
             conn.close()
 
 
+@app.route("/sendVacation", methods=["POST"])
+def send_vacation():
+    conn = None
+    cursor = None
+    try:
+        # Get userId
+        user_id = request.json["userId"]
+        name = request.json["name"]
+        begin_date = datetime.datetime.strptime(request.json["beginDate"], "%Y-%m-%d")
+        end_date = datetime.datetime.strptime(request.json["endDate"], "%Y-%m-%d")
+        new_status = "sent"
+
+        # Establish connection
+        conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
+        cursor = conn.cursor()
+
+        # Get the supervisor's user_id
+        query = f"SELECT user_id FROM supervisor WHERE group_id = (SELECT group_id FROM employee WHERE user_id = {user_id});"
+        cursor.execute(query)
+        supervisor_id = cursor.fetchall()[0][0]
+
+        # Update the status of the work time sheet
+        query = f"""
+            UPDATE work_time_sheet
+            SET status = '{new_status}'
+            WHERE user_id = {user_id} AND status = 'pending' AND work_date BETWEEN '{begin_date}' AND '{end_date}';
+        """
+
+        cursor.execute(query)
+
+        comment = f"{user_id} sent the timesheet for approval from {begin_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}"
+
+        # Notification for the supervisor
+        query = f"""INSERT INTO notification (timestamp, receiver_id, submitter_id, type, status, empl_id, message) 
+        VALUES (current_date, {supervisor_id}, {user_id}, {NotificationTypes.SEND_TIMETABLE}, 0, {user_id}, '{comment}');
+        """
+
+        cursor.execute(query)
+
+        # Commit the changes
+        conn.commit()
+
+        return make_response(jsonify('{success: work timesheet sent to the supervisor}'), 200)
+    except Exception as e:
+        return make_response(jsonify('{error:' + str(e) + '}'), 404)
+    finally:
+        # Clean up
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
 @app.route("/notifications/<user_id>", methods=["GET"])
 def get_notifications(user_id):
     conn = None
@@ -340,7 +394,6 @@ def login():
                         'name': result[2],
                         'lastname': result[3]}
 
-
         return make_response(jsonify(response), 200)
     except Exception as e:
         return make_response(jsonify('{error:' + str(e) + '}'), 404)
@@ -374,6 +427,17 @@ def register():
 
         # Commit the changes
         conn.commit()
+
+        query = f"SELECT user_id FROM users WHERE email={email};"
+        cursor.execute(query)
+        user_id = cursor.fetchall()[0][0]
+
+        absence = "no"
+        status = "pending"
+        query = "INSERT INTO work_time_sheet (user_id, date, absence,status) VALUES"
+        for i in range(1, 31):
+            date = datetime.date(2025, 5, i)
+            query += f"({user_id}, '{date}', '{absence}', '{status}'),"
 
         return make_response(jsonify('{success: user registered}'), 200)
     except Exception as e:
