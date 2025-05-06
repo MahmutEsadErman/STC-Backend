@@ -59,10 +59,10 @@ def get_users():
         for i in results:
             response.append({
                 "userId": i[0],
-                "name": i[1],
-                "lastname": i[2],
-                "role": i[3],
-                "groupId": i[4]
+                "name": i[2],
+                "lastname": i[3],
+                "role": i[4],
+                "groupId": i[1]
             })
 
         if not response:
