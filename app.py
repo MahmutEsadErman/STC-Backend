@@ -301,7 +301,7 @@ def respond_timetable():
         query = f"""
             UPDATE work_time_sheet
             SET status = '{new_status}'
-            WHERE user_id = {user_id} AND date BETWEEN '{begin_date}' AND '{end_date}';
+            WHERE user_id = {user_id} AND date BETWEEN '{startDate}' AND '{endDate}';
         """
         cursor.execute(query)
         comment = f"Your timetable from {startDate.strftime('%Y-%m-%d')} to {endDate.strftime('%Y-%m-%d')} is $new_status!"
