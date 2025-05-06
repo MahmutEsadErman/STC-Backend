@@ -616,7 +616,7 @@ def login():
         response = {'userId': result[0],
                     'role': result[1],
                     'name': result[2],
-                    'lastname': result[3],'grouId':group_id}
+                    'lastname': result[3],'groupId':group_id}
 
         return make_response(jsonify(response), 200)
     except Exception as e:
