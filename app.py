@@ -151,13 +151,13 @@ def get_timetable(user_id):
             response.append({
                 "userId": i[0],
                 "workDate": i[1].strftime("%Y-%m-%d"),
-                "startTime": str(i[2])[:-3] if i[2] is None else None,
-                "endTime": str(i[3])[:-3] if i[3] is None else None,
-                "breakTime": str(i[4])[:-3] if i[4] is None else None,
-                "hoursTarget": str(i[5])[:-3] if i[5] is None else None,
-                "hoursAsIs": str(i[6])[:-3] if i[6] is None else None,
-                "absence": str(i[7])[:-3] if i[7] is None else None,
-                "comment": str(i[8])[:-3] if i[8] is None else None,
+                "startTime": str(i[2])[:-3] if i[2] else None,
+                "endTime": str(i[3])[:-3] if i[3] else None,
+                "breakTime": str(i[4])[:-3] if i[4] else None,
+                "hoursTarget": str(i[5])[:-3] if i[5] else None,
+                "hoursAsIs": str(i[6])[:-3] if i[6] else None,
+                "absence": str(i[7])[:-3] if i[7] else "",
+                "comment": str(i[8])[:-3] if i[8] else "",
                 "status": i[9]
             })
 
