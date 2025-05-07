@@ -336,6 +336,7 @@ def send_sickness():
         name = request.json["name"]
         begin_date = datetime.datetime.strptime(request.json["beginDate"], "%Y-%m-%d")
         end_date = datetime.datetime.strptime(request.json["endDate"], "%Y-%m-%d")
+        comment = request.json["comment"]
 
         absence = "sickness"
 
@@ -353,7 +354,7 @@ def send_sickness():
         # Update the status of the work time sheet
         query = f"""
             UPDATE work_time_sheet
-            SET absence = '{absence}'
+            SET absence = '{absence}',comment='{comment}'
             WHERE user_id = {user_id} AND date BETWEEN '{begin_date}' AND '{end_date}' AND DAYOFWEEK(date) NOT IN (1, 7);
         """
 
