@@ -213,7 +213,7 @@ def get_timetable(user_id):
                 "hoursTarget": str(i[5])[:-3] if i[5] else None,
                 "hoursAsIs": str(i[6])[:-3] if i[6] else None,
                 "absence": str(i[7]) if i[7] else "no",
-                "comment": str(i[8])[:-3] if i[8] else "",
+                "comment": str(i[8]) if i[8] else "",
                 "status": i[9]
             })
 
