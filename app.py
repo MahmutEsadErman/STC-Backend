@@ -668,15 +668,22 @@ def register():
         cursor.execute(query)
         conn.commit()
 
-        absence = "no"
+       absence = "no"
         status = "pending"
-        query = "INSERT INTO work_time_sheet (user_id, date, absence,status) VALUES "
-        for i in range(1, 31):
-            date = datetime.date(2025, 5, i)
-            dateStr = date.strftime("%Y-%m-%d")
-            query += f"({user_id}, '{dateStr}', '{absence}', '{status}'),"
-         
-        cursor.execute(query[:-1])
+        query = "INSERT INTO work_time_sheet (user_id, date, absence, status) VALUES "
+        values = []
+        
+        start_date = datetime.date(2025, 1, 1)
+        end_date = datetime.date(2025, 12, 31)
+        
+        current_date = start_date
+        while current_date <= end_date:
+            dateStr = current_date.strftime("%Y-%m-%d")
+            values.append(f"({user_id}, '{dateStr}', '{absence}', '{status}')")
+            current_date += datetime.timedelta(days=1)
+        
+        query += ",".join(values)
+        cursor.execute(query)
         conn.commit()
         
         return make_response(jsonify('{success: user registered}'), 200)
