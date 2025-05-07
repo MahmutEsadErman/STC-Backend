@@ -667,8 +667,8 @@ def register():
             query = f"INSERT INTO supervisor (user_id, group_id) VALUES ({user_id}, {group_id});"
         cursor.execute(query)
         conn.commit()
-
-       absence = "no"
+           
+        absence = "no"
         status = "pending"
         query = "INSERT INTO work_time_sheet (user_id, date, absence, status) VALUES "
         values = []
