@@ -338,7 +338,7 @@ def send_sickness():
         end_date = datetime.datetime.strptime(request.json["endDate"], "%Y-%m-%d")
         comment = request.json["comment"]
 
-        absence = "sickness"
+        absence = "sick"
 
         # Establish connection
         conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
