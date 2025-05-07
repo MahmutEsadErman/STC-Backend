@@ -553,7 +553,7 @@ def statistics():
         conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
         cursor = conn.cursor()
 
-        query = """SELECT date, AVG(TIMESTAMPDIFF(MINUTE, begin, end) - TIME_TO_SEC(break_time) / 60) AS avg_work_hours 
+        query = """SELECT date, AVG(TIMESTAMPDIFF(SECOND , begin, end) - TIME_TO_SEC(break_time))/3600 AS avg_work_hours
                     FROM work_time_sheet
                     WHERE status = 'approved'
                     GROUP BY date;
