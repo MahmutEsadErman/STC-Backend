@@ -676,7 +676,7 @@ def register():
             dateStr = datetime.datetime.strptime(date, "%Y-%m-%d")
             query += f"({user_id}, '{dateStr}', '{absence}', '{status}'),"
          
-        cursor.execute(query)
+        cursor.execute(query[:-1])
         conn.commit()
         
         return make_response(jsonify('{success: user registered}'), 200)
