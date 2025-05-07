@@ -673,7 +673,8 @@ def register():
         query = "INSERT INTO work_time_sheet (user_id, date, absence,status) VALUES "
         for i in range(1, 31):
             date = datetime.date(2025, 5, i)
-            query += f"({user_id}, '{date}', '{absence}', '{status}'),"
+            dateStr = date.strftime("%Y-%m-%d")
+            query += f"({user_id}, '{dateStr}', '{absence}', '{status}'),"
          
         cursor.execute(query)
         conn.commit()
