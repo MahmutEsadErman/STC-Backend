@@ -611,9 +611,10 @@ def login():
         elif result[1] == "supervisor":            
             query = f"select group_id from supervisor where user_id = {result[0]};"
         
-        cursor.execute(query)
+        
         group_id = 0
         if result[1] != "HR":
+            cursor.execute(query)
             group_id = cursor.fetchone()[0]
         
         response = {'userId': result[0],
