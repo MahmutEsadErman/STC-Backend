@@ -568,7 +568,7 @@ def statistics():
         for i in results:
             response.append({
                 "date": i[0].strftime("%Y-%m-%d"),
-                "avgWorkHours": str(i[1])[:-6] if i[1] else 0
+                "avgWorkHours": str(i[1])[:-6] if i[1] else '0.0'
             })
 
         if not response:
