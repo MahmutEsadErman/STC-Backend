@@ -8,16 +8,10 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-# Database connection details
-# host = os.environ.get("HOST")
-# userDb = os.environ.get("USER")
-# passDb = os.environ.get("PASS")
-# db = os.environ.get("DB")
-
-host = "MYSQL1002.site4now.net"
-userDb = "ab83bf_stcadmi"
-passDb = "Turkiye1461."
-db = "db_ab83bf_stcadmi"
+host = os.environ.get("HOST")
+userDb = os.environ.get("USER")
+passDb = os.environ.get("PASS")
+db = os.environ.get("DB")
 
 class NotificationTypes:
     SEND_TIMETABLE = 1
@@ -60,18 +54,15 @@ def get_users():
         # Fetch results
         results = cursor.fetchall()
 
-        # Fetch results
-        results = cursor.fetchall()
-
         # Process results
         response = []
         for i in results:
             response.append({
                 "userId": i[0],
-                "name": i[1],
-                "lastname": i[2],
-                "role": i[3],
-                "groupId": i[4]
+                "name": i[2],
+                "lastname": i[3],
+                "role": i[4],
+                "groupId": i[1]
             })
 
         if not response:
@@ -163,7 +154,7 @@ def send_timetable():
         query = f"""
             UPDATE work_time_sheet
             SET status = '{new_status}'
-            WHERE user_id = {user_id} AND status = 'pending' AND date BETWEEN '{begin_date}' AND '{end_date}' AND DAYOFWEEK(date) NOT IN (1, 7);
+            WHERE user_id = {user_id} AND status = 'pending' AND date BETWEEN '{begin_date}' AND '{end_date}';
         """
 
         cursor.execute(query)
@@ -221,8 +212,8 @@ def get_timetable(user_id):
                 "breakTime": str(i[4])[:-3] if i[4] else None,
                 "hoursTarget": str(i[5])[:-3] if i[5] else None,
                 "hoursAsIs": str(i[6])[:-3] if i[6] else None,
-                "absence": str(i[7])[:-3] if i[7] else "",
-                "comment": str(i[8])[:-3] if i[8] else "",
+                "absence": str(i[7]) if i[7] else "no",
+                "comment": str(i[8]) if i[8] else "",
                 "status": i[9]
             })
 
@@ -239,6 +230,52 @@ def get_timetable(user_id):
         if conn:
             conn.close()
 
+@app.route("/getVacationRequests/<user_id>", methods=["GET"])
+def get_vacation_requests(user_id):
+    conn = None
+    cursor = None
+    try:
+        query = f" SELECT * FROM vacation_request WHERE sup_id = {user_id}; "
+
+        # Establish connection
+        conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
+
+        # Create a cursor to interact with the database
+        cursor = conn.cursor()
+
+        # Execute the query
+        cursor.execute(query)
+
+        # Fetch results
+        results = cursor.fetchall()
+
+        # Process results
+        response = []
+        for i in results:
+            response.append({
+                "request_id": i[0],
+                "emp_id": i[1],
+                "start_date": i[2].strftime("%Y-%m-%d") if i[2] else None,
+                "end_time": i[3].strftime("%Y-%m-%d") if i[3] else None,
+                "status": i[4],
+                "request_timestamp": str(i[5])[:-3] if i[5] else None,
+                "reasons_for_rejection": i[6] if i[6] else "",
+                "sup_id": i[7]
+            })
+
+
+        if not response:
+            return make_response(jsonify('{error: vacation not found}'), 404)
+
+        return make_response(jsonify(response), 200)
+    except Exception as e:
+        return make_response(jsonify('{error:' + str(e) + '}'), 404)
+    finally:
+        # Clean up
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 # Supervisor approves or rejects the timetable
 @app.route("/respond_timetable", methods=["POST"])
@@ -249,9 +286,9 @@ def respond_timetable():
         # Get data from the request
         user_id = request.json["userId"]
         employee_id = request.json["employeeId"]
-        date = datetime.datetime.strptime(request.json["date"], "%Y-%m-%d %H:%M:%S.%f")
+        startDate = datetime.datetime.strptime(request.json["startDate"], "%Y-%m-%d")
+        endDate = datetime.datetime.strptime(request.json["endDate"], "%Y-%m-%d")
         response = request.json["response"]  # "approved" or "denied"
-        comment = request.json["comment"]
 
         # Establish connection
         conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
@@ -264,10 +301,10 @@ def respond_timetable():
         query = f"""
             UPDATE work_time_sheet
             SET status = '{new_status}'
-            WHERE date = '{date}' AND user_id = {user_id};
+            WHERE user_id = {user_id} AND date BETWEEN '{startDate}' AND '{endDate}';
         """
         cursor.execute(query)
-
+        comment = f"Your timetable from {startDate.strftime('%Y-%m-%d')} to {endDate.strftime('%Y-%m-%d')} is {new_status}!"
         # Add a notification for the employee
         query = f"""
             INSERT INTO notification (timestamp, receiver_id, submitter_id, type, status, empl_id, message)
@@ -299,8 +336,9 @@ def send_sickness():
         name = request.json["name"]
         begin_date = datetime.datetime.strptime(request.json["beginDate"], "%Y-%m-%d")
         end_date = datetime.datetime.strptime(request.json["endDate"], "%Y-%m-%d")
+        comment = request.json["comment"]
 
-        absence = "sickness"
+        absence = "sick"
 
         # Establish connection
         conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
@@ -316,7 +354,7 @@ def send_sickness():
         # Update the status of the work time sheet
         query = f"""
             UPDATE work_time_sheet
-            SET absence = '{absence}'
+            SET absence = '{absence}',comment='{comment}'
             WHERE user_id = {user_id} AND date BETWEEN '{begin_date}' AND '{end_date}' AND DAYOFWEEK(date) NOT IN (1, 7);
         """
 
@@ -378,8 +416,8 @@ def send_vacation():
 
         cursor.execute(query)
 
-        query = f"""INSERT INTO vacation_request (emp_id, start_date, end_time, status, request_timestamp) 
-        VALUES ({user_id}, '{begin_date}', '{end_date}', 0, current_date);
+        query = f"""INSERT INTO vacation_request (emp_id,sup_id, start_date, end_time, status, request_timestamp) 
+        VALUES ({user_id},{supervisor_id} ,'{begin_date}', '{end_date}', 0, current_date);
         """
 
         cursor.execute(query)
@@ -404,10 +442,13 @@ def respond_vacation():
     try:
         # Get data from the request
         user_id = request.json["userId"]
-        employee_id = request.json["employeeId"]
         begin_date = datetime.datetime.strptime(request.json["beginDate"], "%Y-%m-%d")
         end_date = datetime.datetime.strptime(request.json["endDate"], "%Y-%m-%d")
+        
+        employee_id = request.json["employeeId"]
+        requestId = request.json["requestId"]
         response = request.json["response"]  # "approved" or "denied"
+        commentResponse = request.json["comment"]
 
         # Establish connection
         conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
@@ -416,16 +457,16 @@ def respond_vacation():
         # Determine the new status based on the response
 
         if response:
-            comment = f"{employee_id} vacation request approved"
-            new_status = "approved"
+            comment = f"Your vacation request from {begin_date} to {end_date} is approved"
+            absence = "vacation"
         else:
-            comment = f"{employee_id} vacation request denied"
-            new_status = "pending"
+            comment = f"your vacation request from {begin_date} to {end_date} is denied"
+            absence = "no"
 
         query = f"""
             UPDATE work_time_sheet
-            SET status = '{new_status}'
-            WHERE user_id = {user_id} AND date BETWEEN '{begin_date}' AND '{end_date}' AND DAYOFWEEK(date) NOT IN (1, 7);
+            SET absence = '{absence}'
+            WHERE user_id = {employee_id} AND date BETWEEN '{begin_date}' AND '{end_date}' AND DAYOFWEEK(date) NOT IN (1, 7);
         """
         cursor.execute(query)
 
@@ -438,8 +479,8 @@ def respond_vacation():
         cursor.execute(query)
 
         query = f"""UPDATE vacation_request
-        SET status = '{new_status}'
-        WHERE user_id = {user_id} AND date BETWEEN '{begin_date}' AND '{end_date}' AND DAYOFWEEK(date) NOT IN (1, 7);
+        SET status = {1 if response else 2},reasons_for_rejection = '{commentResponse}'
+        WHERE request_id = {requestId};
         """
 
         cursor.execute(query)
@@ -512,7 +553,7 @@ def statistics():
         conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
         cursor = conn.cursor()
 
-        query = """SELECT date, AVG(TIMESTAMPDIFF(MINUTE, begin, end) - TIME_TO_SEC(break_time) / 60) AS avg_work_hours 
+        query = """SELECT date, AVG(TIMESTAMPDIFF(SECOND , begin, end) - TIME_TO_SEC(break_time))/3600 AS avg_work_hours
                     FROM work_time_sheet
                     WHERE status = 'approved'
                     GROUP BY date;
@@ -527,7 +568,7 @@ def statistics():
         for i in results:
             response.append({
                 "date": i[0].strftime("%Y-%m-%d"),
-                "avgWorkHours": str(i[1])[:-3] if i[1] else None
+                "avgWorkHours": str(i[1])[:-6] if i[1] else '0.0'
             })
 
         if not response:
@@ -562,14 +603,25 @@ def login():
         query = f"SELECT user_id, role, name, lastname FROM users WHERE email = '{email}' AND password = '{password}';"
         cursor.execute(query)
         result = cursor.fetchone()
-
+        
         if result is None:
             return make_response(jsonify('{error: user not found}'), 404)
-        else:
-            response = {'userId': result[0],
-                        'role': result[1],
-                        'name': result[2],
-                        'lastname': result[3]}
+            
+        if result[1] == "employee":
+            query = f"select group_id from employee where user_id = {result[0]};"
+        elif result[1] == "supervisor":            
+            query = f"select group_id from supervisor where user_id = {result[0]};"
+        
+        
+        group_id = 0
+        if result[1] != "HR":
+            cursor.execute(query)
+            group_id = cursor.fetchone()[0]
+        
+        response = {'userId': result[0],
+                    'role': result[1],
+                    'name': result[2],
+                    'lastname': result[3],'groupId':group_id}
 
         return make_response(jsonify(response), 200)
     except Exception as e:
@@ -590,24 +642,49 @@ def register():
         # Get user credentials
         email = request.json["email"]
         password = request.json["password"]
-        firstname = request.json["firstname"]
+        name = request.json["name"]
         lastname = request.json["lastname"]
+        role = request.json["role"]
+        group_id = request.json["groupId"]
 
         # Establish connection
         conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
         cursor = conn.cursor()
 
         # Check if the user exists
-        query = f"INSERT INTO users (email, password, first_name, last_name) VALUES ('{email}', '{password}', '{firstname}', '{lastname}');"
+        query = f"INSERT INTO users (email, password, name, lastname, role) VALUES ('{email}', '{password}', '{name}', '{lastname}', '{role}');"
         cursor.execute(query)
 
-        # absence = "no"
-        # status = "pending"
-        # query = "INSERT INTO work_time_sheet (user_id, date, absence,status) VALUES "
-        # for i in range(1, 31):
-        #     date = datetime.date(2025, 5, i)
-        #     query += f"({user_id}, '{date}', '{absence}', '{status}'),"
+        # Commit the changes
+        conn.commit()
 
+        query = f"SELECT user_id FROM users WHERE email='{email}';"
+        cursor.execute(query)
+        user_id = cursor.fetchall()[0][0]
+
+        if role == "employee":
+            query = f"INSERT INTO employee (user_id, group_id) VALUES ({user_id}, {group_id});"
+        elif role == "supervisor":
+            query = f"INSERT INTO supervisor (user_id, group_id) VALUES ({user_id}, {group_id});"
+        cursor.execute(query)
+        conn.commit()
+           
+        absence = "no"
+        status = "pending"
+        query = "INSERT INTO work_time_sheet (user_id, date, absence, status) VALUES "
+        values = []
+        
+        start_date = datetime.date(2025, 1, 1)
+        end_date = datetime.date(2025, 12, 31)
+        
+        current_date = start_date
+        while current_date <= end_date:
+            dateStr = current_date.strftime("%Y-%m-%d")
+            values.append(f"({user_id}, '{dateStr}', '{absence}', '{status}')")
+            current_date += datetime.timedelta(days=1)
+        
+        query += ",".join(values)
+        cursor.execute(query)
         conn.commit()
         
         return make_response(jsonify('{success: user registered}'), 200)
