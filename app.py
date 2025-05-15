@@ -590,41 +590,24 @@ def register():
         # Get user credentials
         email = request.json["email"]
         password = request.json["password"]
-        name = request.json["name"]
+        firstname = request.json["firstname"]
         lastname = request.json["lastname"]
-        role = request.json["role"]
-        group_id = request.json["groupId"]
 
         # Establish connection
         conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
         cursor = conn.cursor()
 
         # Check if the user exists
-        query = f"INSERT INTO users (email, password, name, lastname, role) VALUES ('{email}', '{password}', '{name}', '{lastname}', '{role}');"
+        query = f"INSERT INTO users (email, password, first_name, last_name) VALUES ('{email}', '{password}', '{firstname}', '{lastname}');"
         cursor.execute(query)
 
-        # Commit the changes
-        conn.commit()
+        # absence = "no"
+        # status = "pending"
+        # query = "INSERT INTO work_time_sheet (user_id, date, absence,status) VALUES "
+        # for i in range(1, 31):
+        #     date = datetime.date(2025, 5, i)
+        #     query += f"({user_id}, '{date}', '{absence}', '{status}'),"
 
-        query = f"SELECT user_id FROM users WHERE email='{email}';"
-        cursor.execute(query)
-        user_id = cursor.fetchall()[0][0]
-
-        if role == "employee":
-            query = f"INSERT INTO employee (user_id, group_id) VALUES ({user_id}, {group_id});"
-        elif role == "supervisor":
-            query = f"INSERT INTO supervisor (user_id, group_id) VALUES ({user_id}, {group_id});"
-        cursor.execute(query)
-        conn.commit()
-
-        absence = "no"
-        status = "pending"
-        query = "INSERT INTO work_time_sheet (user_id, date, absence,status) VALUES "
-        for i in range(1, 31):
-            date = datetime.date(2025, 5, i)
-            query += f"({user_id}, '{date}', '{absence}', '{status}'),"
-         
-        cursor.execute(query)
         conn.commit()
         
         return make_response(jsonify('{success: user registered}'), 200)
