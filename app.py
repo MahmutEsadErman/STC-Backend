@@ -62,7 +62,6 @@ def loginCheck():
             response = {
                 'first_name': result[0],
                 'last_name': result[1],
-                'email': email
             }
             print("Login response:", response)  # ✅ Only after it's defined
             return make_response(jsonify(response), 200)
