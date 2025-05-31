@@ -2,25 +2,8 @@
 <dataSource name="db_ab83bf_stcadmi@MYSQL1002.site4now.net">
   <database-model serializer="dbm" dbms="MYSQL" family-id="MYSQL" format-version="4.52">
     <root id="1">
-      <DefaultCasing>lower/lower</DefaultCasing>
       <DefaultEngine>InnoDB</DefaultEngine>
       <DefaultTmpEngine>InnoDB</DefaultTmpEngine>
-      <Grants>db_ab83bf_stcadmi|schema||ab83bf_stcadmi||ALTER|G
-db_ab83bf_stcadmi|schema||ab83bf_stcadmi||ALTER ROUTINE|G
-db_ab83bf_stcadmi|schema||ab83bf_stcadmi||CREATE|G
-db_ab83bf_stcadmi|schema||ab83bf_stcadmi||CREATE ROUTINE|G
-db_ab83bf_stcadmi|schema||ab83bf_stcadmi||CREATE TEMPORARY TABLES|G
-db_ab83bf_stcadmi|schema||ab83bf_stcadmi||CREATE VIEW|G
-db_ab83bf_stcadmi|schema||ab83bf_stcadmi||DELETE|G
-db_ab83bf_stcadmi|schema||ab83bf_stcadmi||DROP|G
-db_ab83bf_stcadmi|schema||ab83bf_stcadmi||EXECUTE|G
-db_ab83bf_stcadmi|schema||ab83bf_stcadmi||INDEX|G
-db_ab83bf_stcadmi|schema||ab83bf_stcadmi||INSERT|G
-db_ab83bf_stcadmi|schema||ab83bf_stcadmi||LOCK TABLES|G
-db_ab83bf_stcadmi|schema||ab83bf_stcadmi||REFERENCES|G
-db_ab83bf_stcadmi|schema||ab83bf_stcadmi||SELECT|G
-db_ab83bf_stcadmi|schema||ab83bf_stcadmi||SHOW VIEW|G
-db_ab83bf_stcadmi|schema||ab83bf_stcadmi||UPDATE|G</Grants>
       <ServerVersion>8.0.40</ServerVersion>
     </root>
     <collation id="2" parent="1" name="armscii8_bin">
@@ -924,7 +907,7 @@ db_ab83bf_stcadmi|schema||ab83bf_stcadmi||UPDATE|G</Grants>
     </collation>
     <schema id="288" parent="1" name="db_ab83bf_stcadmi">
       <Current>1</Current>
-      <LastIntrospectionLocalTimestamp>2025-05-15.06:25:57</LastIntrospectionLocalTimestamp>
+      <LastIntrospectionLocalTimestamp>2025-05-31.21:26:17</LastIntrospectionLocalTimestamp>
       <CollationName>utf8mb3_unicode_ci</CollationName>
     </schema>
     <schema id="289" parent="1" name="information_schema">
@@ -1037,7 +1020,7 @@ product_id</ColNames>
       <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
     </key>
     <column id="314" parent="294" name="id">
-      <AutoIncrement>7</AutoIncrement>
+      <AutoIncrement>22</AutoIncrement>
       <DasType>bigint unsigned|0s</DasType>
       <NotNull>1</NotNull>
       <Position>1</Position>
@@ -1096,7 +1079,7 @@ product_id</ColNames>
       <UnderlyingIndexName>id</UnderlyingIndexName>
     </key>
     <column id="326" parent="295" name="id">
-      <AutoIncrement>1</AutoIncrement>
+      <AutoIncrement>9</AutoIncrement>
       <DasType>bigint unsigned|0s</DasType>
       <NotNull>1</NotNull>
       <Position>1</Position>
@@ -1170,7 +1153,7 @@ product_id</ColNames>
       <UnderlyingIndexName>id</UnderlyingIndexName>
     </key>
     <column id="341" parent="296" name="id">
-      <AutoIncrement>1</AutoIncrement>
+      <AutoIncrement>11</AutoIncrement>
       <DasType>bigint unsigned|0s</DasType>
       <NotNull>1</NotNull>
       <Position>1</Position>
@@ -1181,7 +1164,7 @@ product_id</ColNames>
       <Position>2</Position>
     </column>
     <column id="343" parent="296" name="price">
-      <DasType>decimal(10,2 digit)|0s</DasType>
+      <DasType>float|0s</DasType>
       <NotNull>1</NotNull>
       <Position>3</Position>
     </column>
@@ -1243,7 +1226,7 @@ product_id</ColNames>
       <Predicate>(`rating` &gt;= 1) and (`rating` &lt;= 5)</Predicate>
     </check>
     <column id="356" parent="297" name="id">
-      <AutoIncrement>7</AutoIncrement>
+      <AutoIncrement>19</AutoIncrement>
       <DasType>bigint unsigned|0s</DasType>
       <NotNull>1</NotNull>
       <Position>1</Position>
@@ -1310,7 +1293,7 @@ product_id</ColNames>
       <UnderlyingIndexName>id</UnderlyingIndexName>
     </key>
     <column id="370" parent="298" name="id">
-      <AutoIncrement>6</AutoIncrement>
+      <AutoIncrement>15</AutoIncrement>
       <DasType>bigint unsigned|0s</DasType>
       <NotNull>1</NotNull>
       <Position>1</Position>

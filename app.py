@@ -136,7 +136,15 @@ def homepage():
             cursor.execute(query)
             result = cursor.fetchall()
             if result:
-                response.append(result)
+                for product in result:
+                    response.append({
+                        'id': product[0],
+                        'name': product[1],
+                        'price': product[2],
+                        'category_id': product[3],
+                        'seller_id': product[4],
+                        'amount': product[5]
+                    })
 
         return make_response(jsonify(response), 200)
     except Exception as e:
