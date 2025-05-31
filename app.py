@@ -174,7 +174,45 @@ def showTheProducts(category_id):
         if result:
             for i in result:
                 response.append(
+                    {
+                        'id': i[0],
+                        'name': i[1],
+                        'price': i[2],
+                        'category_id': i[3],
+                        'seller_id': i[4],
+                        'amount': i[5]
+                    }
+                )
+            return make_response(jsonify(response), 200)
+        else:
+            return make_response(jsonify('error : nothing could be found'), 404)
+    except Exception as e:
+        return make_response(jsonify({'error': str(e)}), 404)
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
 
+# Fetch products by user ID
+@app.route('/products/<user_id>',methods=["GET"])
+def getProductsByUser(user_id):
+    cursor = None
+    conn = None
+
+    try:
+        conn = mysql.connector.connect(
+            host=host,
+            user=userDb,
+            password=passDb,
+            database=db
+        )
+        cursor = conn.cursor()
+        query = f"SELECT * FROM products where seller_id = {user_id};"
+        cursor.execute(query)
+        result = cursor.fetchall()
+        response = []
+        if result:
+            for i in result:
+                response.append(
                     {
                         'id': i[0],
                         'name': i[1],
