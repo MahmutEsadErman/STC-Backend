@@ -1,702 +1,671 @@
 import os
-import datetime
-
+from flask import Flask, request, jsonify, make_response
+from flask_sqlalchemy import SQLAlchemy
 import mysql.connector
-from flask import Flask, jsonify, make_response, request
-from flask_cors import CORS
+
+#from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)
+#CORS(app)
 
-host = os.environ.get("HOST")
-userDb = os.environ.get("USER")
-passDb = os.environ.get("PASS")
-db = os.environ.get("DB")
-
-class NotificationTypes:
-    SEND_TIMETABLE = 1
-    TIMETABLE_APPROVAL = 2
-    TIMETABLE_REJECTION = 3
-    SICKNESS = 4
-    VOCATION = 5
-    VOCATION_APPROVAL = 6
-    VOCATION_REJECTION = 7
+host = "MYSQL1002.site4now.net"
+userDb = "ab83bf_stcadmi"
+passDb = "Turkiye1461."
+db = "db_ab83bf_stcadmi"
+port = "3306"
 
 
-@app.route('/', methods=["GET"])
-def database_deneme():
-    return "hello world"
+class Notifications_type:
+    addReviews = '1'  #
+    removeReviews = '2'  #
+    addProducts = '3'  #
+    removeProducts = '4'  #
+    addOntoFavList = '5'  #
+    removeFromFavList = '6'  #
+    purchaseProduct = '7'  # send notf to buyer
+    cancelProduct = '8'  # send notf to seller
+    sellProduct = '9'  # send notf to seller
 
 
-@app.route("/getUsers", methods=["GET"])
-def get_users():
+@app.route('/')
+def databaseDeneme():
+    return "enesby!"
+
+
+@app.route('/login', methods=["POST"])
+def loginCheck():
     conn = None
     cursor = None
     try:
-        # Establish connection
-        conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
+        data = request.get_json()
+        email = data.get("email")
+        password = data.get("password")
 
-        # Create a cursor to interact with the database
+        if not email or not password:
+            return make_response(jsonify({'error': 'Email and password are required'}), 400)
+
+        conn = mysql.connector.connect(
+            host=host,
+            user=userDb,
+            password=passDb,
+            database=db
+        )
+
         cursor = conn.cursor()
-
-        # Execute the query
-        cursor.execute("""SELECT users.user_id, group_id, name, lastname, role
-                        FROM users
-                        LEFT JOIN (
-                            SELECT * FROM employee
-                        UNION
-                        SELECT * FROM supervisor
-                        ) AS combined ON users.user_id = combined.user_id
-                        WHERE users.role != 'HR'
-                        GROUP BY users.user_id
-        """)
-
-        # Fetch results
-        results = cursor.fetchall()
-
-        # Process results
-        response = []
-        for i in results:
-            response.append({
-                "userId": i[0],
-                "name": i[2],
-                "lastname": i[3],
-                "role": i[4],
-                "groupId": i[1]
-            })
-
-        if not response:
-            return make_response(jsonify('{error: subject not found}'), 404)
-
-        return make_response(jsonify(response), 200)
-    except Exception as e:
-        return make_response(jsonify('{error:' + str(e) + '}'), 404)
-    finally:
-        # Clean up
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
-@app.route("/saveTimetable", methods=["POST"])
-def save_timetable():
-    conn = None
-    cursor = None
-    try:
-        timesheet = request.json["timesheet"]
-
-        # Establish connection
-        conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
-
-        # Create a cursor to interact with the database
-        cursor = conn.cursor()
-
-        for entry in timesheet:
-            user_id = entry["userId"]
-            work_date = entry["workDate"]
-            comment = entry["comment"]
-            status = "pending"
-            absence = f"'{entry['absence']}'" if entry["absence"].strip() else "NULL"
-            start_time = f"'{entry['startTime']}'" if entry["startTime"] else "NULL"
-            end_time = f"'{entry['endTime']}'" if entry["endTime"] else "NULL"
-            break_time = f"'{entry['breakTime']}'" if entry["breakTime"] else "NULL"
-            hoursAsIs = f"'{entry['hoursAsIs']}'" if entry["hoursAsIs"] else "NULL"
-            hours_target = f"'{entry['hoursTarget']}'" if entry["hoursTarget"] else "NULL"
-
-            query = f"""UPDATE work_time_sheet SET
-                begin = {start_time},
-                end = {end_time},
-                break_time = {break_time},
-                hours_as_is = {hoursAsIs},
-                hours_target = {hours_target},
-                absence = {absence},
-                comment = '{comment}',
-                status = '{status}'
-                WHERE user_id = {user_id} AND date = '{work_date}'; 
-            """
-
-            cursor.execute(query)
-        conn.commit()
-
-        return make_response(jsonify('{success: work timesheet saved to the system}'), 200)
-    except Exception as e:
-        return make_response(jsonify('{error:' + str(e) + '}'), 404)
-    finally:
-        # Clean up
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
-
-@app.route("/sendTimetable", methods=["POST"])
-def send_timetable():
-    conn = None
-    cursor = None
-    try:
-        # Get userId
-        user_id = request.json["userId"]
-        name = request.json["name"]
-        begin_date = datetime.datetime.strptime(request.json["beginDate"], "%Y-%m-%d")
-        end_date = datetime.datetime.strptime(request.json["endDate"], "%Y-%m-%d")
-        new_status = "sent"
-
-        # Establish connection
-        conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
-        cursor = conn.cursor()
-
-        # Get the supervisor's user_id
-        query = f"SELECT user_id FROM supervisor WHERE group_id = (SELECT group_id FROM employee WHERE user_id = {user_id});"
-        cursor.execute(query)
-        supervisor_id = cursor.fetchall()[0][0]
-
-        # Update the status of the work time sheet
-        query = f"""
-            UPDATE work_time_sheet
-            SET status = '{new_status}'
-            WHERE user_id = {user_id} AND status = 'pending' AND date BETWEEN '{begin_date}' AND '{end_date}';
-        """
-
-        cursor.execute(query)
-
-        comment = f"{name} sent the timesheet for approval from {begin_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}"
-
-        # Notification for the supervisor
-        query = f"""INSERT INTO notification (timestamp, receiver_id, submitter_id, type, status, empl_id, message) 
-        VALUES (current_date, {supervisor_id}, {user_id}, {NotificationTypes.SEND_TIMETABLE}, 0, {user_id}, '{comment}');
-        """
-
-        cursor.execute(query)
-
-        # Commit the changes
-        conn.commit()
-
-        return make_response(jsonify('{success: work timesheet sent to the supervisor}'), 200)
-    except Exception as e:
-        return make_response(jsonify('{error:' + str(e) + '}'), 404)
-    finally:
-        # Clean up
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
-
-@app.route("/getTimetable/<user_id>", methods=["GET"])
-def get_timetable(user_id):
-    conn = None
-    cursor = None
-    try:
-        query = f" SELECT * FROM work_time_sheet WHERE user_id = {user_id}; "
-
-        # Establish connection
-        conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
-
-        # Create a cursor to interact with the database
-        cursor = conn.cursor()
-
-        # Execute the query
-        cursor.execute(query)
-
-        # Fetch results
-        results = cursor.fetchall()
-
-        # Process results
-        response = []
-        for i in results:
-            response.append({
-                "userId": i[0],
-                "workDate": i[1].strftime("%Y-%m-%d"),
-                "startTime": str(i[2])[:-3] if i[2] else None,
-                "endTime": str(i[3])[:-3] if i[3] else None,
-                "breakTime": str(i[4])[:-3] if i[4] else None,
-                "hoursTarget": str(i[5])[:-3] if i[5] else None,
-                "hoursAsIs": str(i[6])[:-3] if i[6] else None,
-                "absence": str(i[7]) if i[7] else "no",
-                "comment": str(i[8]) if i[8] else "",
-                "status": i[9]
-            })
-
-        if not response:
-            return make_response(jsonify('{error: subject not found}'), 404)
-
-        return make_response(jsonify(response), 200)
-    except Exception as e:
-        return make_response(jsonify('{error:' + str(e) + '}'), 404)
-    finally:
-        # Clean up
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
-@app.route("/getVacationRequests/<user_id>", methods=["GET"])
-def get_vacation_requests(user_id):
-    conn = None
-    cursor = None
-    try:
-        query = f" SELECT * FROM vacation_request WHERE sup_id = {user_id}; "
-
-        # Establish connection
-        conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
-
-        # Create a cursor to interact with the database
-        cursor = conn.cursor()
-
-        # Execute the query
-        cursor.execute(query)
-
-        # Fetch results
-        results = cursor.fetchall()
-
-        # Process results
-        response = []
-        for i in results:
-            response.append({
-                "request_id": i[0],
-                "emp_id": i[1],
-                "start_date": i[2].strftime("%Y-%m-%d") if i[2] else None,
-                "end_time": i[3].strftime("%Y-%m-%d") if i[3] else None,
-                "status": i[4],
-                "request_timestamp": str(i[5])[:-3] if i[5] else None,
-                "reasons_for_rejection": i[6] if i[6] else "",
-                "sup_id": i[7]
-            })
-
-
-        if not response:
-            return make_response(jsonify('{error: vacation not found}'), 404)
-
-        return make_response(jsonify(response), 200)
-    except Exception as e:
-        return make_response(jsonify('{error:' + str(e) + '}'), 404)
-    finally:
-        # Clean up
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
-# Supervisor approves or rejects the timetable
-@app.route("/respond_timetable", methods=["POST"])
-def respond_timetable():
-    conn = None
-    cursor = None
-    try:
-        # Get data from the request
-        user_id = request.json["userId"]
-        employee_id = request.json["employeeId"]
-        startDate = datetime.datetime.strptime(request.json["startDate"], "%Y-%m-%d")
-        endDate = datetime.datetime.strptime(request.json["endDate"], "%Y-%m-%d")
-        response = request.json["response"]  # "approved" or "denied"
-
-        # Establish connection
-        conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
-        cursor = conn.cursor()
-
-        # Determine the new status based on the response
-        new_status = "approved" if response else "denied"
-
-        # Update the timetable status
-        query = f"""
-            UPDATE work_time_sheet
-            SET status = '{new_status}'
-            WHERE user_id = {user_id} AND date BETWEEN '{startDate}' AND '{endDate}';
-        """
-        cursor.execute(query)
-        comment = f"Your timetable from {startDate.strftime('%Y-%m-%d')} to {endDate.strftime('%Y-%m-%d')} is {new_status}!"
-        # Add a notification for the employee
-        query = f"""
-            INSERT INTO notification (timestamp, receiver_id, submitter_id, type, status, empl_id, message)
-            VALUES (current_date, {employee_id}, {user_id}, {NotificationTypes.TIMETABLE_APPROVAL if response else NotificationTypes.TIMETABLE_REJECTION}, 0, {employee_id}, '{comment}');
-        """
-        cursor.execute(query)
-
-        # Commit the changes
-        conn.commit()
-
-        return make_response(jsonify('{success: timetable response recorded}'), 200)
-    except Exception as e:
-        return make_response(jsonify('{error:' + str(e) + '}'), 404)
-    finally:
-        # Clean up
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
-
-@app.route("/send_sickness", methods=["POST"])
-def send_sickness():
-    conn = None
-    cursor = None
-    try:
-        # Get userId
-        user_id = request.json["userId"]
-        name = request.json["name"]
-        begin_date = datetime.datetime.strptime(request.json["beginDate"], "%Y-%m-%d")
-        end_date = datetime.datetime.strptime(request.json["endDate"], "%Y-%m-%d")
-        comment = request.json["comment"]
-
-        absence = "sick"
-
-        # Establish connection
-        conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
-        cursor = conn.cursor()
-
-        # Get the supervisor's user_id
-        query = f"SELECT user_id FROM supervisor WHERE group_id = (SELECT group_id FROM employee WHERE user_id = {user_id});"
-        cursor.execute(query)
-        supervisor_id = cursor.fetchall()[0][0]
-
-        notification_type = NotificationTypes.SICKNESS
-
-        # Update the status of the work time sheet
-        query = f"""
-            UPDATE work_time_sheet
-            SET absence = '{absence}',comment='{comment}'
-            WHERE user_id = {user_id} AND date BETWEEN '{begin_date}' AND '{end_date}' AND DAYOFWEEK(date) NOT IN (1, 7);
-        """
-
-        cursor.execute(query)
-
-        comment = f"{name} sent sickness notification from {begin_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}"
-
-        # Notification for the supervisor
-        query = f"""INSERT INTO notification (timestamp, receiver_id, submitter_id, type, status, empl_id, message) 
-        VALUES (current_date, {supervisor_id}, {user_id}, {notification_type}, 0, {user_id}, '{comment}'),
-        (current_date, (SELECT user_id FROM users WHERE role='HR' LIMIT 1), {user_id}, {notification_type}, 0, {user_id}, '{comment}');
-        """
-
-        cursor.execute(query)
-
-        # Commit the changes
-        conn.commit()
-
-        return make_response(jsonify('{success: absence request sent to the supervisor and HR}'), 200)
-    except Exception as e:
-        return make_response(jsonify('{error:' + str(e) + '}'), 404)
-    finally:
-        # Clean up
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
-
-@app.route("/send_vacation", methods=["POST"])
-def send_vacation():
-    conn = None
-    cursor = None
-    try:
-        # Get userId
-        user_id = request.json["userId"]
-        name = request.json["name"]
-        begin_date = datetime.datetime.strptime(request.json["beginDate"], "%Y-%m-%d")
-        end_date = datetime.datetime.strptime(request.json["endDate"], "%Y-%m-%d")
-
-        # Establish connection
-        conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
-        cursor = conn.cursor()
-
-        # Get the supervisor's user_id
-        query = f"SELECT user_id FROM supervisor WHERE group_id = (SELECT group_id FROM employee WHERE user_id = {user_id});"
-        cursor.execute(query)
-        supervisor_id = cursor.fetchall()[0][0]
-
-        absence = "vacation"
-        notification_type = NotificationTypes.VOCATION
-
-        comment = f"{name} sent vacation request for approval from {begin_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}"
-
-        # Notification for the supervisor
-        query = f"""INSERT INTO notification (timestamp, receiver_id, submitter_id, type, status, empl_id, message) 
-        VALUES (current_date, {supervisor_id}, {user_id}, {notification_type}, 0, {user_id}, '{comment}');
-        """
-
-        cursor.execute(query)
-
-        query = f"""INSERT INTO vacation_request (emp_id,sup_id, start_date, end_time, status, request_timestamp) 
-        VALUES ({user_id},{supervisor_id} ,'{begin_date}', '{end_date}', 0, current_date);
-        """
-
-        cursor.execute(query)
-
-        # Commit the changes
-        conn.commit()
-
-        return make_response(jsonify('{success: vacation request sent to the supervisor}'), 200)
-    except Exception as e:
-        return make_response(jsonify('{error:' + str(e) + '}'), 404)
-    finally:
-        # Clean up
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
-@app.route("/respond_vacation", methods=["POST"])
-def respond_vacation():
-    conn = None
-    cursor = None
-    try:
-        # Get data from the request
-        user_id = request.json["userId"]
-        begin_date = datetime.datetime.strptime(request.json["beginDate"], "%Y-%m-%d")
-        end_date = datetime.datetime.strptime(request.json["endDate"], "%Y-%m-%d")
-        
-        employee_id = request.json["employeeId"]
-        requestId = request.json["requestId"]
-        response = request.json["response"]  # "approved" or "denied"
-        commentResponse = request.json["comment"]
-
-        # Establish connection
-        conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
-        cursor = conn.cursor()
-
-        # Determine the new status based on the response
-
-        if response:
-            comment = f"Your vacation request from {begin_date} to {end_date} is approved"
-            absence = "vacation"
-        else:
-            comment = f"your vacation request from {begin_date} to {end_date} is denied"
-            absence = "no"
-
-        query = f"""
-            UPDATE work_time_sheet
-            SET absence = '{absence}'
-            WHERE user_id = {employee_id} AND date BETWEEN '{begin_date}' AND '{end_date}' AND DAYOFWEEK(date) NOT IN (1, 7);
-        """
-        cursor.execute(query)
-
-        # Add a notification for the employee
-        query = f"""
-            INSERT INTO notification (timestamp, receiver_id, submitter_id, type, status, empl_id, message)
-            VALUES (current_date, {employee_id}, {user_id}, {NotificationTypes.VOCATION_APPROVAL if response else NotificationTypes.VOCATION_REJECTION}, 0, {employee_id}, '{comment}'),
-            (current_date, (SELECT user_id FROM users WHERE role='HR' LIMIT 1), {user_id}, {NotificationTypes.VOCATION_APPROVAL if response else NotificationTypes.VOCATION_REJECTION}, 0, {employee_id}, '{comment}');
-        """
-        cursor.execute(query)
-
-        query = f"""UPDATE vacation_request
-        SET status = {1 if response else 2},reasons_for_rejection = '{commentResponse}'
-        WHERE request_id = {requestId};
-        """
-
-        cursor.execute(query)
-
-        # Commit the changes
-        conn.commit()
-
-        return make_response(jsonify('{success: vacation response recorded}'), 200)
-    except Exception as e:
-        return make_response(jsonify('{error:' + str(e) + '}'), 404)
-    finally:
-        # Clean up
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
-
-
-@app.route("/notifications/<user_id>", methods=["GET"])
-def get_notifications(user_id):
-    conn = None
-    cursor = None
-    try:
-        # Get notifications for the user
-        query = f" SELECT * FROM notification WHERE receiver_id = {user_id}; "
-
-        # Establish connection
-        conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
-        cursor = conn.cursor()
-
-        cursor.execute(query)
-        # Fetch results
-        results = cursor.fetchall()
-
-        # Process results
-        response = []
-        for i in results:
-            response.append({
-                "notificationId": i[0],
-                "timestamp": i[1].strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],
-                "receiverId": i[2],
-                "submitterId": i[3],
-                "type": i[4],
-                "status": i[5],
-                "employeeID": i[6],
-                "message": i[7]
-            })
-
-        if not response:
-            return make_response(jsonify('{error: subject not found}'), 404)
-
-        return make_response(jsonify(response), 200)
-    except Exception as e:
-        return make_response(jsonify('{error:' + str(e) + '}'), 404)
-    finally:
-        # Clean up
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
-
-@app.route("/statistics", methods=["GET"])
-def statistics():
-    conn = None
-    cursor = None
-    try:
-        # Establish connection
-        conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
-        cursor = conn.cursor()
-
-        query = """SELECT date, AVG(TIMESTAMPDIFF(SECOND , begin, end) - TIME_TO_SEC(break_time))/3600 AS avg_work_hours
-                    FROM work_time_sheet
-                    WHERE status = 'approved'
-                    GROUP BY date;
-                 """
-
-        cursor.execute(query)
-
-        # Fetch results
-        results = cursor.fetchall()
-        # Process results
-        response = []
-        for i in results:
-            response.append({
-                "date": i[0].strftime("%Y-%m-%d"),
-                "avgWorkHours": str(i[1])[:-6] if i[1] else '0.0'
-            })
-
-        if not response:
-            return make_response(jsonify('{error: subject not found}'), 404)
-
-        return make_response(jsonify(response), 200)
-
-    except Exception as e:
-        return make_response(jsonify('{error:' + str(e) + '}'), 404)
-    finally:
-        # Clean up
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
-
-@app.route("/login", methods=["POST"])
-def login():
-    conn = None
-    cursor = None
-    try:
-        # Get user credentials
-        email = request.json["email"]
-        password = request.json["password"]
-
-        # Establish connection
-        conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
-        cursor = conn.cursor()
-
-        # Check if the user exists
-        query = f"SELECT user_id, role, name, lastname FROM users WHERE email = '{email}' AND password = '{password}';"
-        cursor.execute(query)
+        query = "SELECT first_name, last_name FROM users WHERE email = %s AND password = %s"
+        cursor.execute(query, (email, password))
         result = cursor.fetchone()
-        
-        if result is None:
-            return make_response(jsonify('{error: user not found}'), 404)
-            
-        if result[1] == "employee":
-            query = f"select group_id from employee where user_id = {result[0]};"
-        elif result[1] == "supervisor":            
-            query = f"select group_id from supervisor where user_id = {result[0]};"
-        
-        
-        group_id = 0
-        if result[1] != "HR":
-            cursor.execute(query)
-            group_id = cursor.fetchone()[0]
-        
-        response = {'userId': result[0],
-                    'role': result[1],
-                    'name': result[2],
-                    'lastname': result[3],'groupId':group_id}
 
-        return make_response(jsonify(response), 200)
+        if not result:
+            return make_response(jsonify({'error': 'Invalid credentials'}), 401)
+        else:
+            response = {
+                'first_name': result[0],
+                'last_name': result[1],
+                'email': email
+            }
+            print("Login response:", response)  # ✅ Only after it's defined
+            return make_response(jsonify(response), 200)
+
     except Exception as e:
-        return make_response(jsonify('{error:' + str(e) + '}'), 404)
+        print("Login error:", str(e))  # ✅ Log the actual error
+        return make_response(jsonify({'error': str(e)}), 404)
     finally:
-        # Clean up
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
+        if cursor: cursor.close()
+        if conn: conn.close()
 
 
-@app.route("/register", methods=["POST"])
+@app.route('/register', methods=["POST"])
 def register():
     conn = None
     cursor = None
     try:
-        # Get user credentials
-        email = request.json["email"]
-        password = request.json["password"]
-        name = request.json["name"]
-        lastname = request.json["lastname"]
-        role = request.json["role"]
-        group_id = request.json["groupId"]
 
-        # Establish connection
-        conn = mysql.connector.connect(host=host, user=userDb, password=passDb, database=db)
+        data = request.get_json()  # retriving data from request
+        first_name = data.get("first_name")
+        last_name = data.get("last_name")
+        email = data.get("email")
+        password = data.get("password")
+        conn = mysql.connector.connect(
+            host=host,
+            user=userDb,
+            password=passDb,
+            database=db
+        )
+        cursor = conn.cursor()
+        query = f"INSERT INTO users(first_name,last_name,email,password) VALUES('{first_name}', '{last_name}', '{email}', '{password}') "
+        cursor.execute(query)
+
+        conn.commit()
+        return make_response(jsonify('{success: user registered}'), 200)
+
+    except Exception as e:
+        return make_response(jsonify({'error': str(e)}), 404)
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+
+
+@app.route('/homepage', methods=[
+    "POST"])  # login basarili olduktan sonra ya da olmadan once rastegele categorilerin altinda product olusur
+def homepage():
+    conn = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(
+            host=host,
+            user=userDb,
+            password=passDb,
+            database=db
+        )
+        #data = request.get_json()
+        cursor = conn.cursor()
+        # Kategori ID'lerini çek
+        query = "SELECT id FROM categories"
+        cursor.execute(query)
+        category_ids = cursor.fetchall()
+        response = []
+
+        for cat in category_ids:
+            category_id = cat[0]  # tuple içinden sayıyı al
+
+            query = f"""
+                SELECT * FROM products 
+                WHERE category_id = {category_id} 
+                ORDER BY RAND() 
+                LIMIT 5
+            """
+            cursor.execute(query)
+            result = cursor.fetchall()
+            if result:
+                response.append(result)
+
+        return make_response(jsonify(response), 200)
+    except Exception as e:
+        return make_response(jsonify({'error': str(e)}), 404)
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+
+
+@app.route('/categories/<category_id>',
+           methods=["POST"])  # categori belirlendikten sonra o categori icerisindeki productlar gonderilir
+def showTheProducts(category_id):
+    cursor = None
+    conn = None
+
+    try:
+        conn = mysql.connector.connect(
+            host=host,
+            user=userDb,
+            password=passDb,
+            database=db
+        )
+        cursor = conn.cursor()
+        query = f"SELECT * FROM products where category_id = {category_id};"
+        cursor.execute(query)
+        result = cursor.fetchall()
+        response = []
+        if result:
+            for i in result:
+                response.append(
+
+                    {
+                        'id': i[0],
+                        'name': i[1],
+                        'price': i[2],
+                        'category_id': i[3],
+                        'seller_id': i[4],
+                        'amount': i[5]
+                    }
+                )
+            return make_response(jsonify(response), 200)
+        else:
+            return make_response(jsonify('error : nothing could be found'), 404)
+    except Exception as e:
+        return make_response(jsonify({'error': str(e)}), 404)
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+
+
+@app.route('/addProduct', methods=["POST"])
+def addProducts():
+    conn = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(
+            host=host,
+            user=userDb,
+            password=passDb,
+            database=db
+        )
+        data = request.get_json()  # user_id,name,price,category_id,amount
+        user_id = data.get("user_id")
+        name = data.get("name")
+        price = data.get("price")
+        category_id = data.get("category_id")
+        amount = data.get("amount")
+        cursor = conn.cursor()
+        query = f"INSERT INTO products(name,price,category_id,seller_id,amount) VALUES('{name}',{price},{category_id},{user_id},{amount})"
+        cursor.execute(query)
+        query = f"INSERT INTO notifications (user_id,type,message,created_at) VALUES ({user_id},'{3}',' {name}  is added',NOW())"
+        cursor.execute(query)
+        conn.commit()
+        return make_response(jsonify(f'{{succes :  product is added}}', 200))
+    except Exception as e:
+
+        return make_response(jsonify({'error': str(e)}), 404)
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.route('/removeProduct/<product_id>', methods=["POST"])
+def removeProducts(product_id):
+    conn = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(
+            host=host,
+            user=userDb,
+            password=passDb,
+            database=db
+        )
+        cursor = conn.cursor()
+        data = request.get_json()
+        user_id = data.get("user_id")
+        query = f"SELECT name FROM products where  id = {product_id}"
+        cursor.execute(query)
+        result = cursor.fetchall()
+        if not result:
+            return make_response(jsonify(f'{{error :  product couldnt be removed}}'), 404)
+        name = result[0][0]
+        query = f"DELETE FROM products where  id = {product_id}"
+        cursor.execute(query)
+        query = f"INSERT INTO notifications (user_id,type,message,created_at) VALUES ({user_id},'{4}',' The product {name}  is removed',NOW())"
+        cursor.execute(query)
+        conn.commit()
+        return make_response(jsonify(f'{{succes :  product is removed}}'), 200)
+    except Exception as e:
+
+        return make_response(jsonify({'error': str(e)}), 404)
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.route('/reviews/<product_id>', methods=["POST"])  # producta tiklantiktan sonra reviewslarini gosterir
+def reviews(product_id):
+    cursor = None
+    conn = None
+    try:
+        conn = mysql.connector.connect(host=host,
+                                       user=userDb,
+                                       password=passDb,
+                                       database=db)
+        cursor = conn.cursor()
+        query = f"SELECT * FROM reviews where product_id=  {product_id}"
+        cursor.execute(query)
+        result = cursor.fetchall()
+        if result:
+            response = []
+            for i in result:
+                response.append(
+                    {
+                        'id': i[0],
+                        'product_id': i[1],
+                        'user_id': i[2],
+                        'rating': i[3],
+                        'comment': i[4],
+                        'review_date': i[5]
+
+                    }
+                )
+            return make_response(jsonify(response), 200)
+        else:
+            return make_response(jsonify({'error': str(e)}), 404)
+    except Exception as e:
+        return make_response(jsonify({'error': str(e)}), 404)
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+
+
+@app.route('/reviews/<product_id>/add', methods=["POST"])  #review ekle
+def addReviews(product_id):
+    cursor = None
+    conn = None
+    try:
+        conn = mysql.connector.connect(host=host,
+                                       user=userDb,
+                                       password=passDb,
+                                       database=db)
         cursor = conn.cursor()
 
-        # Check if the user exists
-        query = f"INSERT INTO users (email, password, name, lastname, role) VALUES ('{email}', '{password}', '{name}', '{lastname}', '{role}');"
+        data = request.get_json()
+        user_id = data.get("user_id")
+        rating = data.get("rating")
+        comment = data.get("comment")
+        query = f"INSERT INTO reviews(product_id,user_id,rating,comment,review_date) VALUES({product_id},{user_id},{rating},'{comment}',NOW())"
         cursor.execute(query)
 
-        # Commit the changes
-        conn.commit()
+        message = "review is added"
+        query = f"INSERT INTO notifications (user_id,type,message,created_at) VALUES ({user_id},'{1}','{message}',NOW())"
+        cursor.execute(query)
 
-        query = f"SELECT user_id FROM users WHERE email='{email}';"
-        cursor.execute(query)
-        user_id = cursor.fetchall()[0][0]
-
-        if role == "employee":
-            query = f"INSERT INTO employee (user_id, group_id) VALUES ({user_id}, {group_id});"
-        elif role == "supervisor":
-            query = f"INSERT INTO supervisor (user_id, group_id) VALUES ({user_id}, {group_id});"
-        cursor.execute(query)
         conn.commit()
-           
-        absence = "no"
-        status = "pending"
-        query = "INSERT INTO work_time_sheet (user_id, date, absence, status) VALUES "
-        values = []
-        
-        start_date = datetime.date(2025, 1, 1)
-        end_date = datetime.date(2025, 12, 31)
-        
-        current_date = start_date
-        while current_date <= end_date:
-            dateStr = current_date.strftime("%Y-%m-%d")
-            values.append(f"({user_id}, '{dateStr}', '{absence}', '{status}')")
-            current_date += datetime.timedelta(days=1)
-        
-        query += ",".join(values)
-        cursor.execute(query)
-        conn.commit()
-        
-        return make_response(jsonify('{success: user registered}'), 200)
+        return make_response(jsonify('{success : your review is added}', 200))
     except Exception as e:
-        return make_response(jsonify('{error:' + str(e) + '}'), 404)
+        return make_response(jsonify({'error': str(e)}), 404)
     finally:
-        # Clean up
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
+        conn.close()
+        cursor.close()
 
 
-if __name__ == '__main__':
+@app.route('/reviews/<id>/remove', methods=["POST"])  #review sil
+def removeReviews(id):
+    cursor = None
+    conn = None
+    try:
+        conn = mysql.connector.connect(host=host,
+                                       user=userDb,
+                                       password=passDb,
+                                       database=db)
+        cursor = conn.cursor()
+        query = f"SELECT * FROM reviews where id = {id}"
+        cursor.execute(query)
+        result = cursor.fetchall()
+        if not result:
+            return make_response(jsonify('{error : your review couldnt be found}', 404))
+        query = f"DELETE FROM reviews where id = {id}"
+        cursor.execute(query)
+        message = "review is removed"
+        query = f"INSERT INTO notifications (user_id,type,message,created_at) VALUES ({result[0][2]},'{2}','{message}',NOW())"
+        cursor.execute(query)
+
+        conn.commit()
+
+        return make_response(jsonify('{success : your review is removed}', 200))
+    except Exception as e:
+        return make_response(jsonify({'error': str(e)}), 404)
+    finally:
+        conn.close()
+        cursor.close()
+
+
+@app.route('/favorites', methods=["POST"])
+def favorites():  #user_id
+    conn = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(host=host,
+                                       user=userDb,
+                                       password=passDb,
+                                       database=db)
+        cursor = conn.cursor()
+        data = request.get_json()
+        user_id = data.get('user_id')
+        query = f"SELECT * from favorites where user_id = {user_id}"
+        cursor.execute(query)
+
+        result = cursor.fetchall()
+        if not result:
+            return make_response(jsonify('{error: favorites is empty}'), 404)
+        response = []
+        for i in result:
+            response.append({
+                'user_id': i[0],
+                'product_id': i[1]
+            })
+
+        return make_response(jsonify(response), 200)
+    except Exception as e:
+        return make_response(jsonify({'error': str(e)}), 404)
+    finally:
+        conn.close()
+        cursor.close()
+
+
+@app.route('/favorites/add', methods=["POST"])
+def addFavorites():  #product_id,user_id
+    cursor = None
+    conn = None
+
+    try:
+        conn = mysql.connector.connect(host=host,
+                                       user=userDb,
+                                       password=passDb,
+                                       database=db)
+        cursor = conn.cursor()
+        data = request.get_json()
+        product_id = data.get("product_id")
+        user_id = data.get("user_id")
+        query = f"INSERT INTO favorites VALUES({user_id},{product_id})"
+        cursor.execute(query)
+        query = f"insert into notifications (user_id,type,message,created_at) values({user_id},'5','product is added on favlist',NOW())"
+        cursor.execute(query)
+        conn.commit()
+
+        return make_response(jsonify({'success ': ' product added into your favorites'}), 200)
+    except Exception as e:
+        return make_response(jsonify({'error': str(e)}), 404)
+    finally:
+        conn.close()
+        cursor.close()
+
+
+@app.route('/favorites/remove', methods=["POST"])
+def removeFavorites():  #user_id,product_id
+    cursor = None
+    conn = None
+    try:
+        conn = mysql.connector.connect(host=host,
+                                       user=userDb,
+                                       password=passDb,
+                                       database=db)
+        cursor = conn.cursor()
+        data = request.get_json()
+        product_id = data.get("product_id")
+        user_id = data.get("user_id")
+        query = f"SELECT * from favorites where product_id ={product_id}"
+        cursor.execute(query)
+        result = cursor.fetchall()
+        if not result:
+            return make_response(jsonify('{error : there is no such a entry}'))
+        query = f"DELETE FROM favorites where product_id ={product_id}"
+        cursor.execute(query)
+        query = f"insert into notifications (user_id,type,message,created_at) values({user_id},'6','product is removed from favlist',NOW())"
+        cursor.execute(query)
+        conn.commit()
+
+        return make_response(jsonify({'success': 'selected product has been removed from the favorites list'}), 200)
+    except Exception as e:
+        return make_response(jsonify({'error': str(e)}), 404)
+    finally:
+        conn.close()
+        cursor.close()
+
+
+@app.route('/notification/<user_id>', methods=["GET"])
+def notifications(user_id):
+    conn = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(host=host,
+                                       user=userDb,
+                                       password=passDb,
+                                       database=db)
+        cursor = conn.cursor()
+
+        query = f"SELECT * FROM notifications where user_id = {user_id}"
+        cursor.execute(query)
+        result = cursor.fetchall()
+        if not result:
+            make_response(jsonify('{error : there is no any notifications sent to this user}'), 404)
+        response = []
+        for i in result:
+            response.append(
+                {
+                    "id": i[0],
+                    "user_id": i[1],
+                    "type": i[2],
+                    "message": i[3],
+                    "is_read": i[4],
+                    "created_at": i[5]
+                }
+            )
+        return make_response(jsonify(response), 200)
+    except Exception as e:
+        return make_response(jsonify({'error ': str(e)}), 404)
+    finally:
+        conn.close
+        cursor.close
+
+
+@app.route('/notificationIsRead/<notification_id>', methods=["GET"])
+def notificationIsRead(notification_id):
+    conn = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(host=host,
+                                       user=userDb,
+                                       password=passDb,
+                                       database=db)
+        cursor = conn.cursor()
+        query = f"select id   from notifications where id = {notification_id}"
+        cursor.execute(query)
+        result = cursor.fetchall()
+        if not result:
+            return make_response(jsonify('{error : there is no such a entry in notifications}'), 404)
+        query = f" UPDATE notifications SET is_read = 1 where id = {notification_id} "
+        cursor.execute(query)
+        conn.commit()
+
+        return make_response(jsonify("success : notification is read"), 200)
+    except Exception as e:
+        return make_response(jsonify({'error': str(e)}), 404)
+    finally:
+        conn.close
+        cursor.close
+
+
+@app.route('/orders', methods=["POST"])
+def orders():  #user_id
+    conn = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(
+            host=host,
+            user=userDb,
+            password=passDb,
+            database=db)
+        cursor = conn.cursor()
+        data = request.get_json()
+        user_id = data.get("user_id")
+        query = f"select * from orders where customer_id = {user_id}"
+        cursor.execute(query)
+        result = cursor.fetchall()
+        if not result:
+            return make_response(jsonify({'error : couldnt be found any entry'}), 404)
+        response = []
+        for i in result:
+            response.append({
+                'id': i[0],
+                'customer_id': i[1],
+                'product_id': i[2],
+                'amount': i[3],
+                'order_date': i[4],
+                'status': i[5],
+                'address': i[6]
+            })
+            return make_response(jsonify(response), 200)
+    except Exception as e:
+        return make_response(jsonify({'error': str(e)}), 404)
+    finally:
+        conn.close
+        cursor.close
+
+
+@app.route('/purchase', methods=["POST"])
+def purchase():  #order_id
+    conn = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(
+            host=host,
+            user=userDb,
+            password=passDb,
+            database=db)
+        cursor = conn.cursor()
+        data = request.get_json()
+        order_id = data.get("order_id")
+        query = f"select amount,status,product_id,customer_id from orders where id = {order_id} "
+        cursor.execute(query)
+        result = cursor.fetchall()
+        if not result:
+            return make_response(jsonify("{error : there is no such a order}"))
+        print(result)
+        amount = result[0][0]
+        status = result[0][1]
+        product_id = result[0][2]
+        user_id = result[0][3]
+        if (status != "pending"):
+            return make_response(jsonify("error : there is noany pending orders"), 404)
+        query = f"select amount from products where id = {product_id}"
+        cursor.execute(query)
+        result = cursor.fetchall()
+        available_quantity = result[0][0]
+        if (available_quantity == 0 or (available_quantity - amount) < 0):
+            return make_response(jsonify("{error : there is not enough product}"))
+        query = f"update products  set amount = {available_quantity - amount} where id = {product_id}"
+        cursor.execute(query)
+        print("buraada")
+        query = f"INSERT into notifications (user_id,type,message,created_at) VALUES({user_id},'7','purchasing is done without having any issues',NOW())"  #for buyer
+        cursor.execute(query)
+        query = f"UPDATE orders set status  = 'processing' where id = {order_id}"
+        cursor.execute(query)
+        query = f"insert into notifications(user_id,type,message,created_at) values((select seller_id from products where id = {product_id}),'9','your product has been bought amount of {amount} ',NOW())"  #for seller
+        cursor.execute(query)
+        conn.commit()
+        return make_response(jsonify('{succes : purchasing is done} '), 200)
+    except Exception as e:
+        return make_response(jsonify({'error': str(e)}), 404)
+    finally:
+        conn.close
+        cursor.close
+
+
+@app.route('/addToOrders', methods=["POST"])
+def addToOrders():  #user_id,amount,product_id,address
+    conn = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(
+            host=host,
+            user=userDb,
+            password=passDb,
+            database=db)
+        cursor = conn.cursor()
+        data = request.get_json()
+        user_id = data.get("user_id")
+        product_id = data.get("product_id")
+        amount = data.get("amount")
+        address = data.get("address")
+        query = f"select status,address,amount from orders where customer_id = {user_id} and product_id={product_id}"
+        cursor.execute(query)
+        result = cursor.fetchall()
+        status = result[0][0]
+        if (status == 'pending' and address == result[0][1]):
+            query = f" update orders set amount= {amount + result[0][2]} where customer_id = {user_id} and product_id={product_id} "
+            cursor.execute(query)
+            conn.commit()
+            return make_response(jsonify("success  : orders exists but still added "), 200)
+
+        query = f"INSERT INTO orders(customer_id,product_id,amount,order_date,address) VALUES({user_id},{product_id},{amount},NOW(),'{address}')"
+        cursor.execute(query)
+        conn.commit()
+        return make_response(jsonify("success  : orders is added "), 200)
+    except Exception as e:
+        return make_response(jsonify({'error': str(e)}), 404)
+    finally:
+        conn.close
+        cursor.close
+
+
+@app.route('/cancelOrder', methods=["POST"])
+def cancelOrder():  #order_id
+    conn = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(
+            host=host,
+            user=userDb,
+            password=passDb,
+            database=db)
+        cursor = conn.cursor()
+        data = request.get_json()
+        order_id = data.get("order_id")
+        query = f"select * from orders where id = {order_id} "
+        cursor.execute(query)
+        result = cursor.fetchall()
+        status = result[0][5]
+        if (status == 'delivered'):
+            return make_response(jsonify('{error : order had already been delivered}'), 404)
+        query = f"update orders set status = 'cancelled' where id = {order_id}"
+        cursor.execute(query)
+
+        query = f"insert into notifications (user_id,type,message,created_at) VALUES((select seller_id from products where id = {result[0][2]}),'8','the order is cancelled',NOW())"
+        cursor.execute(query)
+        conn.commit()
+
+        return make_response(jsonify('{succes : order is cancelled}'), 200)
+    except Exception as e:
+        return make_response(jsonify({'error': str(e)}), 404)
+    finally:
+        conn.close
+        cursor.close
+
+
+if __name__ == "__main__":
     app.run(debug=True)
