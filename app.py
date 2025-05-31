@@ -1,7 +1,8 @@
 import os
-from flask import Flask,request,jsonify, make_response
+from flask import Flask, request, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
-import mysql.connector  
+import mysql.connector
+
 #from flask_cors import CORS
 
 app = Flask(__name__)
@@ -13,22 +14,25 @@ passDb = "Turkiye1461."
 db = "db_ab83bf_stcadmi"
 port = "3306"
 
+
 class Notifications_type:
-    addReviews = '1' #
-    removeReviews = '2' #
-    addProducts ='3' # 
-    removeProducts = '4' #
-    addOntoFavList = '5'#
-    removeFromFavList = '6'#
-    purchaseProduct = '7'# send notf to buyer
-    cancelProduct = '8' # send notf to seller
-    sellProduct = '9'# send notf to seller
+    addReviews = '1'  #
+    removeReviews = '2'  #
+    addProducts = '3'  #
+    removeProducts = '4'  #
+    addOntoFavList = '5'  #
+    removeFromFavList = '6'  #
+    purchaseProduct = '7'  # send notf to buyer
+    cancelProduct = '8'  # send notf to seller
+    sellProduct = '9'  # send notf to seller
+
 
 @app.route('/')
 def databaseDeneme():
     return "enesby!"
 
-@app.route('/login', methods=["GET"])
+
+@app.route('/login', methods=["POST"])
 def loginCheck():
     conn = None
     cursor = None
@@ -58,7 +62,6 @@ def loginCheck():
             response = {
                 'first_name': result[0],
                 'last_name': result[1],
-                'email': email
             }
             print("Login response:", response)  # ✅ Only after it's defined
             return make_response(jsonify(response), 200)
@@ -71,14 +74,13 @@ def loginCheck():
         if conn: conn.close()
 
 
-
-@app.route('/register',methods=["POST"])
+@app.route('/register', methods=["POST"])
 def register():
     conn = None
     cursor = None
     try:
-       
-        data = request.get_json() # retriving data from request
+
+        data = request.get_json()  # retriving data from request
         first_name = data.get("first_name")
         last_name = data.get("last_name")
         email = data.get("email")
@@ -92,12 +94,12 @@ def register():
         cursor = conn.cursor()
         query = f"INSERT INTO users(first_name,last_name,email,password) VALUES('{first_name}', '{last_name}', '{email}', '{password}') "
         cursor.execute(query)
-        
+
         conn.commit()
         return make_response(jsonify('{success: user registered}'), 200)
 
     except Exception as e:
-       return make_response(jsonify({'error': str(e)}), 404)
+        return make_response(jsonify({'error': str(e)}), 404)
     finally:
         if cursor: cursor.close()
         if conn: conn.close()
@@ -116,10 +118,10 @@ def homepage():
         )
         #data = request.get_json()
         cursor = conn.cursor()
-                # Kategori ID'lerini çek
+        # Kategori ID'lerini çek
         query = "SELECT id FROM categories"
         cursor.execute(query)
-        category_ids = cursor.fetchall()  
+        category_ids = cursor.fetchall()
         response = []
 
         for cat in category_ids:
@@ -129,18 +131,16 @@ def homepage():
                 SELECT * FROM products 
                 WHERE category_id = {category_id} 
                 ORDER BY RAND() 
-                LIMIT 5
+                LIMIT 10
             """
             cursor.execute(query)
             result = cursor.fetchall()
             if result:
                 response.append(result)
 
-            
-        
-        return make_response(jsonify(response),200)
-    except Exception as e :
-        return make_response(jsonify({'error':str(e)}),404)
+        return make_response(jsonify(response), 200)
+    except Exception as e:
+        return make_response(jsonify({'error': str(e)}), 404)
     finally:
         if cursor: cursor.close()
         if conn: conn.close()
@@ -161,93 +161,95 @@ def showTheProducts(category_id):
         cursor = conn.cursor()
         query = f"SELECT * FROM products where category_id = {category_id};"
         cursor.execute(query)
-        result  = cursor.fetchall()
+        result = cursor.fetchall()
         response = []
         if result:
             for i in result:
-                
                 response.append(
-                    
+
                     {
                         'id': i[0],
-                        'name':i[1],
-                        'price':i[2],
-                        'category_id':i[3],
-                        'seller_id':i[4],
-                        'amount':i[5]
+                        'name': i[1],
+                        'price': i[2],
+                        'category_id': i[3],
+                        'seller_id': i[4],
+                        'amount': i[5]
                     }
-                    )       
-            return make_response(jsonify(response),200)
+                )
+            return make_response(jsonify(response), 200)
         else:
-            return make_response(jsonify('error : nothing could be found'),404)
+            return make_response(jsonify('error : nothing could be found'), 404)
     except Exception as e:
-        return make_response(jsonify({'error': str(e)}),404)
+        return make_response(jsonify({'error': str(e)}), 404)
     finally:
         if cursor: cursor.close()
         if conn: conn.close()
 
-@app.route('/addProduct',methods= ["POST"])
+
+@app.route('/addProduct', methods=["POST"])
 def addProducts():
     conn = None
     cursor = None
     try:
-        conn = mysql.connector.connect( 
+        conn = mysql.connector.connect(
             host=host,
             user=userDb,
             password=passDb,
             database=db
         )
-        data = request.get_json() # user_id,name,price,category_id,amount
+        data = request.get_json()  # user_id,name,price,category_id,amount
         user_id = data.get("user_id")
-        name= data.get("name")
-        price= data.get("price")
-        category_id= data.get("category_id")
-        amount= data.get("amount")
+        name = data.get("name")
+        price = data.get("price")
+        category_id = data.get("category_id")
+        amount = data.get("amount")
         cursor = conn.cursor()
-        query = f"INSERT INTO products(name,price,category_id,seller_id,amount) VALUES('{name}',{price},{category_id},{user_id},{amount})"   
+        query = f"INSERT INTO products(name,price,category_id,seller_id,amount) VALUES('{name}',{price},{category_id},{user_id},{amount})"
         cursor.execute(query)
         query = f"INSERT INTO notifications (user_id,type,message,created_at) VALUES ({user_id},'{3}',' {name}  is added',NOW())"
         cursor.execute(query)
-        conn.commit()  
-        return make_response(jsonify(f'{{succes :  product is added}}',200)   )
+        conn.commit()
+        return make_response(jsonify(f'{{succes :  product is added}}', 200))
     except Exception as e:
 
-        return make_response(jsonify({'error': str(e)}),404)
+        return make_response(jsonify({'error': str(e)}), 404)
     finally:
         cursor.close()
         conn.close()
-@app.route('/removeProduct/<product_id>',methods= ["POST"])
+
+
+@app.route('/removeProduct/<product_id>', methods=["POST"])
 def removeProducts(product_id):
     conn = None
     cursor = None
     try:
-        conn = mysql.connector.connect( 
+        conn = mysql.connector.connect(
             host=host,
             user=userDb,
             password=passDb,
             database=db
         )
-        cursor= conn.cursor()
+        cursor = conn.cursor()
         data = request.get_json()
-        user_id=data.get("user_id")
+        user_id = data.get("user_id")
         query = f"SELECT name FROM products where  id = {product_id}"
         cursor.execute(query)
         result = cursor.fetchall()
         if not result:
-            return make_response(jsonify(f'{{error :  product couldnt be removed}}'),404)
+            return make_response(jsonify(f'{{error :  product couldnt be removed}}'), 404)
         name = result[0][0]
         query = f"DELETE FROM products where  id = {product_id}"
         cursor.execute(query)
         query = f"INSERT INTO notifications (user_id,type,message,created_at) VALUES ({user_id},'{4}',' The product {name}  is removed',NOW())"
         cursor.execute(query)
-        conn.commit()  
-        return make_response(jsonify(f'{{succes :  product is removed}}'),200)
+        conn.commit()
+        return make_response(jsonify(f'{{succes :  product is removed}}'), 200)
     except Exception as e:
 
-        return make_response(jsonify({'error': str(e)}),404)
+        return make_response(jsonify({'error': str(e)}), 404)
     finally:
         cursor.close()
-        conn.close()        
+        conn.close()
 
 @app.route('/reviews/<product_id>',methods=["GET"]) # producta tiklantiktan sonra reviewslarini gosterir
 def reviews(product_id):
@@ -255,94 +257,94 @@ def reviews(product_id):
     conn = None
     try:
         conn = mysql.connector.connect(host=host,
-            user=userDb,
-            password=passDb,
-            database=db)
-        cursor  = conn.cursor()
+                                       user=userDb,
+                                       password=passDb,
+                                       database=db)
+        cursor = conn.cursor()
         query = f"SELECT * FROM reviews where product_id=  {product_id}"
         cursor.execute(query)
-        result  = cursor.fetchall()
-        if result :
+        result = cursor.fetchall()
+        if result:
             response = []
             for i in result:
                 response.append(
                     {
-                        'id' : i[0],
+                        'id': i[0],
                         'product_id': i[1],
                         'user_id': i[2],
-                        'rating':i[3],
-                        'comment':i[4],
-                        'review_date':i[5]
+                        'rating': i[3],
+                        'comment': i[4],
+                        'review_date': i[5]
 
                     }
                 )
-            return make_response(jsonify(response),200) 
+            return make_response(jsonify(response), 200)
         else:
-            return make_response(jsonify({'error' :str(e) }),404)
+            return make_response(jsonify({'error': str(e)}), 404)
     except Exception as e:
-        return make_response(jsonify({'error': str(e)}),404)
+        return make_response(jsonify({'error': str(e)}), 404)
     finally:
         if cursor: cursor.close()
-        if conn: conn.close()    
+        if conn: conn.close()
 
-@app.route('/reviews/<product_id>/add',methods = ["POST"])#review ekle
-   
+
+@app.route('/reviews/<product_id>/add', methods=["POST"])  #review ekle
 def addReviews(product_id):
     cursor = None
     conn = None
     try:
         conn = mysql.connector.connect(host=host,
-            user=userDb,
-            password=passDb,
-            database=db)
-        cursor  = conn.cursor()
-        
+                                       user=userDb,
+                                       password=passDb,
+                                       database=db)
+        cursor = conn.cursor()
+
         data = request.get_json()
         user_id = data.get("user_id")
         rating = data.get("rating")
         comment = data.get("comment")
         query = f"INSERT INTO reviews(product_id,user_id,rating,comment,review_date) VALUES({product_id},{user_id},{rating},'{comment}',NOW())"
         cursor.execute(query)
-       
+
         message = "review is added"
         query = f"INSERT INTO notifications (user_id,type,message,created_at) VALUES ({user_id},'{1}','{message}',NOW())"
         cursor.execute(query)
-        
+
         conn.commit()
-        return make_response(jsonify('{success : your review is added}',200))
+        return make_response(jsonify('{success : your review is added}', 200))
     except Exception as e:
-        return make_response(jsonify({'error': str(e)}),404)
+        return make_response(jsonify({'error': str(e)}), 404)
     finally:
         conn.close()
         cursor.close()
 
 
-@app.route('/reviews/<id>/remove',methods = ["POST"])#review sil
+@app.route('/reviews/<id>/remove', methods=["POST"])  #review sil
 def removeReviews(id):
     cursor = None
     conn = None
     try:
         conn = mysql.connector.connect(host=host,
-            user=userDb,
-            password=passDb,
-            database=db)
-        cursor  = conn.cursor()
+                                       user=userDb,
+                                       password=passDb,
+                                       database=db)
+        cursor = conn.cursor()
         query = f"SELECT * FROM reviews where id = {id}"
         cursor.execute(query)
-        result  = cursor.fetchall()
+        result = cursor.fetchall()
         if not result:
-            return make_response(jsonify('{error : your review couldnt be found}',404))
+            return make_response(jsonify('{error : your review couldnt be found}', 404))
         query = f"DELETE FROM reviews where id = {id}"
         cursor.execute(query)
         message = "review is removed"
         query = f"INSERT INTO notifications (user_id,type,message,created_at) VALUES ({result[0][2]},'{2}','{message}',NOW())"
         cursor.execute(query)
-        
+
         conn.commit()
 
-        return make_response(jsonify('{success : your review is removed}',200))
+        return make_response(jsonify('{success : your review is removed}', 200))
     except Exception as e:
-        return make_response(jsonify({'error': str(e)}),404)
+        return make_response(jsonify({'error': str(e)}), 404)
     finally:
         conn.close()
         cursor.close()
@@ -370,7 +372,7 @@ def favorites(user_id):#user_id
                 'user_id': i[0],
                 'product_id':i[1]
             })
-        
+
         return make_response(jsonify(response),200)
     except Exception as e:
         return make_response(jsonify({'error': str(e)}),404)
@@ -382,8 +384,8 @@ def favorites(user_id):#user_id
 def addFavorites():#product_id,user_id
     cursor = None
     conn = None
-    
-    
+
+
     try:
         conn = mysql.connector.connect(host=host,
             user=userDb,
@@ -407,20 +409,21 @@ def addFavorites():#product_id,user_id
         conn.close()
         cursor.close()
 
-@app.route('/favorites/remove',methods = ["POST"])
-def removeFavorites():#user_id,product_id
+
+@app.route('/favorites/remove', methods=["POST"])
+def removeFavorites():  #user_id,product_id
     cursor = None
     conn = None
     try:
         conn = mysql.connector.connect(host=host,
-            user=userDb,
-            password=passDb,
-            database=db)
+                                       user=userDb,
+                                       password=passDb,
+                                       database=db)
         cursor = conn.cursor()
         data = request.get_json()
         product_id = data.get("product_id")
-        user_id  = data.get("user_id")
-        query =f"SELECT * from favorites where product_id ={product_id}"
+        user_id = data.get("user_id")
+        query = f"SELECT * from favorites where product_id ={product_id}"
         cursor.execute(query)
         result = cursor.fetchall()
         if not result:
@@ -431,44 +434,45 @@ def removeFavorites():#user_id,product_id
         cursor.execute(query)
         conn.commit()
 
-        return make_response(jsonify({'success' : 'selected product has been removed from the favorites list'}),200)
+        return make_response(jsonify({'success': 'selected product has been removed from the favorites list'}), 200)
     except Exception as e:
-        return make_response(jsonify({'error': str(e)}),404)
+        return make_response(jsonify({'error': str(e)}), 404)
     finally:
         conn.close()
         cursor.close()
 
-@app.route('/notification/<user_id>',methods = ["GET"])
+
+@app.route('/notification/<user_id>', methods=["GET"])
 def notifications(user_id):
     conn = None
     cursor = None
     try:
         conn = mysql.connector.connect(host=host,
-            user=userDb,
-            password=passDb,
-            database=db)
+                                       user=userDb,
+                                       password=passDb,
+                                       database=db)
         cursor = conn.cursor()
-        
+
         query = f"SELECT * FROM notifications where user_id = {user_id}"
         cursor.execute(query)
         result = cursor.fetchall()
         if not result:
-            make_response(jsonify('{error : there is no any notifications sent to this user}'),404)
+            make_response(jsonify('{error : there is no any notifications sent to this user}'), 404)
         response = []
-        for i  in result:
+        for i in result:
             response.append(
                 {
-                    "id" : i[0],
-                    "user_id" : i[1],
-                    "type" : i[2],
-                    "message" : i[3],
-                    "is_read" : i[4],
-                    "created_at" : i[5]
+                    "id": i[0],
+                    "user_id": i[1],
+                    "type": i[2],
+                    "message": i[3],
+                    "is_read": i[4],
+                    "created_at": i[5]
                 }
             )
-        return make_response(jsonify(response),200)
-    except Exception as e :
-        return make_response(jsonify({'error ': str(e)}),404)
+        return make_response(jsonify(response), 200)
+    except Exception as e:
+        return make_response(jsonify({'error ': str(e)}), 404)
     finally:
         conn.close
         cursor.close
@@ -477,7 +481,7 @@ def notifications(user_id):
 def notificationIsRead(notification_id):
     conn = None
     cursor = None
-    try:    
+    try:
         conn = mysql.connector.connect(host=host,
             user=userDb,
             password=passDb,
@@ -491,7 +495,7 @@ def notificationIsRead(notification_id):
         query = f" UPDATE notifications SET is_read = 1 where id = {notification_id} "
         cursor.execute(query)
         conn.commit()
-        
+
         return make_response(jsonify("success : notification is read"),200)
     except Exception as e:
         return make_response(jsonify({'error' : str(e)}),404)
@@ -503,7 +507,7 @@ def notificationIsRead(notification_id):
 def orders(user_id):#user_id
     conn= None
     cursor = None
-    try : 
+    try :
         conn = mysql.connector.connect(
             host=host,
             user=userDb,
@@ -527,16 +531,18 @@ def orders(user_id):#user_id
                 'order_date': i[4],
                 'status': i[5],
                 'address': i[6]
-            }) 
-            return make_response(jsonify(response),200)
+            })
+            return make_response(jsonify(response), 200)
     except Exception as e:
         return make_response(jsonify({'error': str(e)} ),404)
     finally:
         conn.close
         cursor.close
-@app.route('/purchase',methods = ["POST"])
-def purchase():#order_id
-    conn= None
+
+
+@app.route('/purchase', methods=["POST"])
+def purchase():  #order_id
+    conn = None
     cursor = None
     try:
         conn = mysql.connector.connect(
@@ -545,7 +551,7 @@ def purchase():#order_id
             password=passDb,
             database=db)
         cursor = conn.cursor()
-        data =  request.get_json()
+        data = request.get_json()
         order_id = data.get("order_id")
         query = f"select amount,status,product_id,customer_id from orders where id = {order_id} "
         cursor.execute(query)
@@ -554,38 +560,38 @@ def purchase():#order_id
             return make_response(jsonify("{error : there is no such a order}"))
         print(result)
         amount = result[0][0]
-        status  = result[0][1]
+        status = result[0][1]
         product_id = result[0][2]
         user_id = result[0][3]
         if (status != "pending"):
-            return make_response(jsonify("error : there is noany pending orders"),404)
+            return make_response(jsonify("error : there is noany pending orders"), 404)
         query = f"select amount from products where id = {product_id}"
         cursor.execute(query)
-        result= cursor.fetchall()
+        result = cursor.fetchall()
         available_quantity = result[0][0]
-        if (available_quantity==0 or (available_quantity-amount)<0):
+        if (available_quantity == 0 or (available_quantity - amount) < 0):
             return make_response(jsonify("{error : there is not enough product}"))
-        query = f"update products  set amount = {available_quantity-amount} where id = {product_id}"
+        query = f"update products  set amount = {available_quantity - amount} where id = {product_id}"
         cursor.execute(query)
         print("buraada")
-        query = f"INSERT into notifications (user_id,type,message,created_at) VALUES({user_id},'7','purchasing is done without having any issues',NOW())" #for buyer
+        query = f"INSERT into notifications (user_id,type,message,created_at) VALUES({user_id},'7','purchasing is done without having any issues',NOW())"  #for buyer
         cursor.execute(query)
         query = f"UPDATE orders set status  = 'processing' where id = {order_id}"
         cursor.execute(query)
-        query = f"insert into notifications(user_id,type,message,created_at) values((select seller_id from products where id = {product_id}),'9','your product has been bought amount of {amount} ',NOW())" #for seller
-        cursor.execute(query)                                                             
+        query = f"insert into notifications(user_id,type,message,created_at) values((select seller_id from products where id = {product_id}),'9','your product has been bought amount of {amount} ',NOW())"  #for seller
+        cursor.execute(query)
         conn.commit()
-        return make_response(jsonify('{succes : purchasing is done} '),200)
+        return make_response(jsonify('{succes : purchasing is done} '), 200)
     except Exception as e:
-        return make_response(jsonify({'error' : str(e)}),404)
+        return make_response(jsonify({'error': str(e)}), 404)
     finally:
         conn.close
         cursor.close
 
 
-@app.route('/addToOrders',methods=["POST"])
-def addToOrders():#user_id,amount,product_id,address
-    conn= None
+@app.route('/addToOrders', methods=["POST"])
+def addToOrders():  #user_id,amount,product_id,address
+    conn = None
     cursor = None
     try:
         conn = mysql.connector.connect(
@@ -603,25 +609,26 @@ def addToOrders():#user_id,amount,product_id,address
         cursor.execute(query)
         result = cursor.fetchall()
         status = result[0][0]
-        if (status =='pending' and address ==result[0][1]):
-            query = f" update orders set amount= {amount +result[0][2]} where customer_id = {user_id} and product_id={product_id} "
+        if (status == 'pending' and address == result[0][1]):
+            query = f" update orders set amount= {amount + result[0][2]} where customer_id = {user_id} and product_id={product_id} "
             cursor.execute(query)
             conn.commit()
-            return make_response(jsonify("success  : orders exists but still added "),200)
+            return make_response(jsonify("success  : orders exists but still added "), 200)
 
-        query= f"INSERT INTO orders(customer_id,product_id,amount,order_date,address) VALUES({user_id},{product_id},{amount},NOW(),'{address}')"
+        query = f"INSERT INTO orders(customer_id,product_id,amount,order_date,address) VALUES({user_id},{product_id},{amount},NOW(),'{address}')"
         cursor.execute(query)
         conn.commit()
-        return make_response(jsonify("success  : orders is added "),200)
+        return make_response(jsonify("success  : orders is added "), 200)
     except Exception as e:
-       return make_response(jsonify({'error' : str(e)}),404)
+        return make_response(jsonify({'error': str(e)}), 404)
     finally:
         conn.close
         cursor.close
 
-@app.route('/cancelOrder',methods=["POST"])
-def cancelOrder():#order_id
-    conn= None
+
+@app.route('/cancelOrder', methods=["POST"])
+def cancelOrder():  #order_id
+    conn = None
     cursor = None
     try:
         conn = mysql.connector.connect(
@@ -636,8 +643,8 @@ def cancelOrder():#order_id
         cursor.execute(query)
         result = cursor.fetchall()
         status = result[0][5]
-        if (status=='delivered'):
-            return make_response(jsonify('{error : order had already been delivered}'),404) 
+        if (status == 'delivered'):
+            return make_response(jsonify('{error : order had already been delivered}'), 404)
         query = f"update orders set status = 'cancelled' where id = {order_id}"
         cursor.execute(query)
 
@@ -645,10 +652,9 @@ def cancelOrder():#order_id
         cursor.execute(query)
         conn.commit()
 
-
-        return make_response(jsonify('{succes : order is cancelled}'),200)
+        return make_response(jsonify('{succes : order is cancelled}'), 200)
     except Exception as e:
-        return make_response(jsonify({'error' : str(e)}),404)
+        return make_response(jsonify({'error': str(e)}), 404)
     finally:
         conn.close
         cursor.close
@@ -656,8 +662,3 @@ def cancelOrder():#order_id
 
 if __name__ == "__main__":
     app.run(debug=True)
-
-
-
-
-    
