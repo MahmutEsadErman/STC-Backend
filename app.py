@@ -521,8 +521,8 @@ def notifications(user_id):
     except Exception as e:
         return make_response(jsonify({'error ': str(e)}), 404)
     finally:
-        conn.close
-        cursor.close
+        conn.close()
+        cursor.close()
 
 @app.route('/notificationIsRead/<notification_id>',methods=["POST"])
 def notificationIsRead(notification_id):
@@ -547,8 +547,8 @@ def notificationIsRead(notification_id):
     except Exception as e:
         return make_response(jsonify({'error' : str(e)}),404)
     finally:
-        conn.close
-        cursor.close
+        conn.close()
+        cursor.close()
 
 @app.route('/orders/<user_id>',methods = ["GET"])
 def orders(user_id):#user_id
@@ -567,7 +567,7 @@ def orders(user_id):#user_id
         cursor.execute(query)
         result = cursor.fetchall()
         if not result:
-            return make_response(jsonify({'error : couldnt be found any entry'} ),404)
+            return make_response(jsonify({'error : couldnt found any entry'} ),404)
         response = []
         for i in result:
             response.append({
@@ -583,8 +583,8 @@ def orders(user_id):#user_id
     except Exception as e:
         return make_response(jsonify({'error': str(e)} ),404)
     finally:
-        conn.close
-        cursor.close
+        conn.close()
+        cursor.close()
 
 
 @app.route('/purchase', methods=["POST"])
@@ -632,8 +632,8 @@ def purchase():  #order_id
     except Exception as e:
         return make_response(jsonify({'error': str(e)}), 404)
     finally:
-        conn.close
-        cursor.close
+        conn.close()
+        cursor.close()
 
 
 @app.route('/addToOrders', methods=["POST"])
@@ -655,12 +655,13 @@ def addToOrders():  #user_id,amount,product_id,address
         query = f"select status,address,amount from orders where customer_id = {user_id} and product_id={product_id}"
         cursor.execute(query)
         result = cursor.fetchall()
-        status = result[0][0]
-        if (status == 'pending' and address == result[0][1]):
-            query = f" update orders set amount= {amount + result[0][2]} where customer_id = {user_id} and product_id={product_id} "
-            cursor.execute(query)
-            conn.commit()
-            return make_response(jsonify("success  : orders exists but still added "), 200)
+        if result:
+            status = result[0][0]
+            if (status == 'pending' and address == result[0][1]):
+                query = f" update orders set amount= {amount + result[0][2]} where customer_id = {user_id} and product_id={product_id} "
+                cursor.execute(query)
+                conn.commit()
+                return make_response(jsonify("success  : orders exists but still added "), 200)
 
         query = f"INSERT INTO orders(customer_id,product_id,amount,order_date,address) VALUES({user_id},{product_id},{amount},NOW(),'{address}')"
         cursor.execute(query)
@@ -669,8 +670,8 @@ def addToOrders():  #user_id,amount,product_id,address
     except Exception as e:
         return make_response(jsonify({'error': str(e)}), 404)
     finally:
-        conn.close
-        cursor.close
+        conn.close()
+        cursor.close()
 
 
 @app.route('/cancelOrder', methods=["POST"])
@@ -703,8 +704,8 @@ def cancelOrder():  #order_id
     except Exception as e:
         return make_response(jsonify({'error': str(e)}), 404)
     finally:
-        conn.close
-        cursor.close
+        conn.close()
+        cursor.close()
 
 
 if __name__ == "__main__":
