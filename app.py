@@ -52,7 +52,7 @@ def loginCheck():
         )
 
         cursor = conn.cursor()
-        query = "SELECT first_name, last_name FROM users WHERE email = %s AND password = %s"
+        query = "SELECT id, first_name, last_name FROM users WHERE email = %s AND password = %s"
         cursor.execute(query, (email, password))
         result = cursor.fetchone()
 
@@ -60,8 +60,9 @@ def loginCheck():
             return make_response(jsonify({'error': 'Invalid credentials'}), 401)
         else:
             response = {
-                'first_name': result[0],
-                'last_name': result[1],
+                'id': result[0],
+                'first_name': result[1],
+                'last_name': result[2]
             }
             print("Login response:", response)  # ✅ Only after it's defined
             return make_response(jsonify(response), 200)
@@ -326,7 +327,7 @@ def reviews(product_id):
                 )
             return make_response(jsonify(response), 200)
         else:
-            return make_response(jsonify({'error': str(e)}), 404)
+            return make_response(jsonify({'error'}), 404)
     except Exception as e:
         return make_response(jsonify({'error': str(e)}), 404)
     finally:
